@@ -451,11 +451,12 @@ Follow this sequence for every Alteryx migration.
 14. **Report discrepancies** — Present the validation summary to the user.
 15. **Iterate** — Fix any failures and re-validate until all checks pass.
 
-### Phase 6: Finalize
+### Phase 6: Optimize & Finalize
 
-16. **Add documentation** — Markdown cells explaining each step, original Alteryx tool mapping.
-17. **Clean up** — Remove scratch cells, temporary tables.
-18. **Confirm with user** — Present final notebook structure and validation results.
+16. **Run the Post-Migration Optimization Checklist** — See section below.
+17. **Add documentation** — Markdown cells explaining each step, original Alteryx tool mapping.
+18. **Clean up** — Remove scratch cells, temporary tables.
+19. **Confirm with user** — Present final notebook structure and validation results.
 
 ---
 
@@ -510,6 +511,10 @@ Every notebook should start with:
 | DateTime parsing errors | Alteryx auto-detects date formats; Spark requires explicit format strings | Use `F.to_timestamp(col, "yyyy-MM-dd HH:mm:ss")` with exact format |
 | Duplicate rows after Union | Alteryx Union auto-deduplicates by configuration; PySpark `unionByName` does not | Add `.dropDuplicates()` if Alteryx config had dedup enabled |
 | Cross Tab column name issues | Alteryx generates readable pivot column names; Spark may produce names with special chars | Rename pivot columns explicitly |
+| `.cache()` fails on serverless | Serverless compute does not support `.cache()` or `.persist()` | Use temp Delta tables with `materialize()` pattern (see Serverless section) |
+| Column names with spaces in Delta | Spark columns with spaces/special chars fail on Delta write | Use `delta.columnMapping.mode = "name"` with `minReaderVersion=2`, `minWriterVersion=5` |
+| Category values containing '#' | Special chars in data cause type casting failures | Use `try_cast()` instead of `.cast()` to handle gracefully |
+| Debug `.count()` triggers full recomputation | Each `.count()` call on an uncached lazy DataFrame re-runs the entire lineage | Remove debug counts, or place them after materialization/caching |
 
 ---
 
@@ -522,6 +527,93 @@ Every notebook should start with:
 5. **Cache intermediate DataFrames sparingly** — Only cache when reused multiple times in the same notebook
 6. **Prefer `F.expr()` for complex SQL** — Some Alteryx formulas translate more cleanly to SQL expressions
 7. **Use Photon-enabled compute** — Leverage Photon for faster Delta operations
+8. **Consolidate groupBy operations** — When computing multiple aggregations on the same grouping keys (e.g., Laspeyres numerator + denominator), combine into a single `.groupBy().agg()` call instead of separate groupBys joined together. This eliminates redundant shuffles and joins.
+9. **Batch validation statistics** — Compute all mean/median/sum in a single `.select()` instead of looping per column. Each `.collect()` triggers a Spark job.
+10. **Use `len(pandas_df)` instead of `spark_df.count()`** — When a pandas DataFrame is already in memory (e.g., from `pd.read_excel`), use `len()` for row counts to avoid triggering Spark materialization.
+11. **Convert Excel to Parquet/Delta for production** — `pd.read_excel` is single-threaded and slow for large files. For recurring workflows, convert source Excel to Parquet or Delta once, then read natively in Spark.
+
+---
+
+## Post-Migration Optimization Checklist (MANDATORY)
+
+**After validation passes, ALWAYS run through this checklist before marking the migration as complete.**
+
+Alteryx workflows are inherently sequential and in-memory. A naive 1:1 translation to PySpark often produces correct results but with catastrophic performance due to Spark's lazy evaluation model. The same DataFrame can be recomputed dozens of times without the developer realizing it.
+
+### 1. Identify Reused DataFrames
+
+Scan the notebook for DataFrames that are referenced in multiple downstream operations (joins, unions, aggregations, writes, validations). Each reference triggers full recomputation of the DataFrame's lineage.
+
+**Rule:** If a DataFrame is used in N downstream actions, Spark recomputes it N times unless materialized.
+
+**Example from AU Monthly Inflation migration:** 4 branch DataFrames were each used in 1-5 Fisher index calls. Without materialization, the full Silver pipeline (671K rows) was recomputed ~40 times, inflating runtime from ~3 min to ~20 min.
+
+### 2. Materialize Strategically
+
+**On classic/interactive clusters:** Use `.cache()` or `.persist()` for frequently reused DataFrames.
+
+**On serverless compute:** `.cache()` and `.persist()` are NOT supported. Use this temp Delta table pattern instead:
+
+```python
+_TEMP_TABLES = []
+def materialize(df, name):
+    """Write DataFrame to a temp Delta table and read back to break lineage."""
+    table = f"catalog.schema._tmp_{name}"
+    df.write.mode("overwrite") \
+        .option("delta.columnMapping.mode", "name") \
+        .option("delta.minReaderVersion", "2") \
+        .option("delta.minWriterVersion", "5") \
+        .saveAsTable(table)
+    _TEMP_TABLES.append(table)
+    return spark.table(table)
+
+def cleanup_temp_tables():
+    for t in _TEMP_TABLES:
+        spark.sql(f"DROP TABLE IF EXISTS {t}")
+    _TEMP_TABLES.clear()
+```
+
+**Where to materialize (priority order):**
+1. Branch point DataFrames (used by multiple downstream paths)
+2. DataFrames after expensive transformations (groupBy, joins on large tables)
+3. Final output DataFrames reused in both output write and validation
+
+### 3. Consolidate Aggregations
+
+Alteryx Summarize tools often produce multiple separate aggregations that get joined back together. In PySpark, these should be a single `.groupBy().agg()` call.
+
+**Before (slow — N groupBys + N-1 joins):**
+```python
+laspeyres = df.groupBy(*cols).agg(F.sum("L_num").alias("L_num")).join(
+    df.groupBy(*cols).agg(F.sum("L_den").alias("L_den")), on=cols)
+```
+
+**After (fast — 1 groupBy, 0 joins):**
+```python
+result = df.groupBy(*cols).agg(
+    F.sum("L_num").alias("L_num"),
+    F.sum("L_den").alias("L_den"),
+    F.sum("P_num").alias("P_num"),
+    F.sum("P_den").alias("P_den")
+)
+```
+
+### 4. Minimize Action Calls
+
+Each Spark action (`.count()`, `.collect()`, `.show()`, `.write`) triggers full computation of the DataFrame lineage. Audit the notebook for unnecessary actions:
+
+- Remove debug `.count()` calls or move them after materialization
+- Replace `spark_df.count()` with `len(pandas_df)` when a pandas version exists
+- Batch multiple statistics into a single `.select(...).collect()` instead of per-column loops
+
+### 5. Add Cleanup Cell
+
+Always add a cleanup cell at the end of the notebook to drop temporary tables:
+
+```python
+# Final cell
+cleanup_temp_tables()
+```
 
 ---
 
@@ -533,4 +625,6 @@ Every notebook should start with:
 4. **ALWAYS add the Alteryx tool mapping table** to each notebook as documentation.
 5. **ALWAYS follow medallion architecture** unless the user explicitly requests a flat/single-notebook migration.
 6. **ALWAYS report validation results** in a clear summary format with PASS/FAIL per check.
-7. **When in doubt, ask.** Ambiguous Alteryx configurations (e.g., join type, null handling, sort order) should be confirmed with the user rather than assumed.
+7. **ALWAYS run the Post-Migration Optimization Checklist** after validation passes. Correct results with poor performance is an incomplete migration.
+8. **ALWAYS check compute type** before using `.cache()` — it fails on serverless. Use temp Delta tables instead.
+9. **When in doubt, ask.** Ambiguous Alteryx configurations (e.g., join type, null handling, sort order) should be confirmed with the user rather than assumed.
