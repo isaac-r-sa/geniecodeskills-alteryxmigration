@@ -1,2 +1,2 @@
 # GenieCodeSkills
-A set of Skills for GenieCode based on customer real word workloads
+A set of Skills for Genie Code based on real word customer workloads
