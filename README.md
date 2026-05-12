@@ -4,13 +4,15 @@ A set of [Databricks Genie Code](https://docs.databricks.com/aws/en/genie-code/s
 
 ## Skills
 
-| Skill folder | Name | Description |
-| --- | --- | --- |
-| `Skills/alteryxToPythonSpark` | **Alteryx Migration to PySpark on Databricks** | Converts Alteryx workflows (`.yxmd`, `.yxmc`, `.yxwz`) into Python / PySpark notebooks following a medallion (bronze / silver / gold) layout, with mandatory output validation against an expected result file. |
-| `Skills/alteryxToLakeflowDesigner` | **alteryx-to-vdp** | Converts Alteryx workflows into Databricks **Lakeflow Designer** (Visual Data Prep ETL) pipelines. Maps the full Alteryx tool palette to VDP operators (Source, Output, Aggregate, Combine, Filter, Join, Pivot, Sort, SQL, Transform, Python, AI Function, etc.) and materializes the final output to a Unity Catalog Delta table. |
-| `Skills/alteryxToDatabricksSdp` | **alteryx-to-databricks-sdp** | Converts Alteryx workflows into a runnable Databricks **Lakeflow Spark Declarative Pipeline (SDP)** expressed in pure SQL. Emits `CREATE OR REFRESH STREAMING TABLE` / `MATERIALIZED VIEW` files in bronze/silver/gold layers plus a `MANUAL_STEPS.md` for anything that can't be auto-converted. |
 
-Sample Alteryx workflows used to develop and test these skills live under `SampleAlteryxWorkflows/`.
+| Skill folder                       | Name                                           | Description                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Skills/alteryxToPythonSpark`      | **Alteryx Migration to PySpark on Databricks** | Converts Alteryx workflows (`.yxmd`, `.yxmc`, `.yxwz`) into Python / PySpark notebooks following a medallion (bronze / silver / gold) layout, with mandatory output validation against an expected result file.                                                                                                                     |
+| `Skills/alteryxToLakeflowDesigner` | **alteryx-to-vdp**                             | Converts Alteryx workflows into Databricks **Lakeflow Designer** (Visual Data Prep ETL) pipelines. Maps the full Alteryx tool palette to VDP operators (Source, Output, Aggregate, Combine, Filter, Join, Pivot, Sort, SQL, Transform, Python, AI Function, etc.) and materializes the final output to a Unity Catalog Delta table. |
+| `Skills/alteryxToDatabricksSdp`    | **alteryx-to-databricks-sdp**                  | Converts Alteryx workflows into a runnable Databricks **Lakeflow Spark Declarative Pipeline (SDP)** expressed in pure SQL. Emits `CREATE OR REFRESH STREAMING TABLE` / `MATERIALIZED VIEW` files in bronze/silver/gold layers plus a `MANUAL_STEPS.md` for anything that can't be auto-converted.                                   |
+
+
+
 
 ## Installing to the Genie Code skills folder
 
@@ -44,7 +46,7 @@ done
 
 ### Option 2 — Databricks Git folder
 
-1. In the Databricks UI: **Workspace → Users → <you> → .assistant → skills**, create the `.assistant/skills` path if it does not exist.
+1. In the Databricks UI: **Workspace → Users → **** → .assistant → skills**, create the `.assistant/skills` path if it does not exist.
 2. From the Databricks UI, **Add → Git folder** and clone this repo into a scratch location (e.g. `/Workspace/Users/<you>/repos/GenieCodeSkills_AlteryxMigration`).
 3. Move (or symlink/copy) each subdirectory under `Skills/` into `…/.assistant/skills/`. Genie Code will pick up changes automatically when you next open the panel.
 
@@ -63,3 +65,4 @@ For feedback, bug reports, or feature requests, reach out to:
 
 - Isaac Rahnema — [isaac.r@databricks.com](mailto:isaac.r@databricks.com)
 - Daphne Koch — [daphne.koch@databricks.com](mailto:daphne.koch@databricks.com)
+
