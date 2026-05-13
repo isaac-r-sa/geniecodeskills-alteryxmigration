@@ -1,0 +1,841 @@
+<?xml version="1.0"?>
+<AlteryxDocument yxmdVer="2023.1">
+  <Nodes>
+
+    <!-- 1. Input Data: Transactions CSV -->
+    <Node ToolID="1">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="54" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/transactions.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <IgnoreErrors>False</IgnoreErrors>
+            <FieldLen>2147483647</FieldLen>
+            <AllowShareWrite>False</AllowShareWrite>
+            <ImportLine>1</ImportLine>
+            <CodePage>65001</CodePage>
+            <QuoteOutputFields>NewLinesAndQuotes</QuoteOutputFields>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Input Transactions</Name>
+          <DefaultAnnotationText>Raw transactions.csv (20M rows)</DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 2. Input Data: Product Catalog CSV -->
+    <Node ToolID="2">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="54" y="200" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/product_catalog.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <IgnoreErrors>False</IgnoreErrors>
+            <FieldLen>2147483647</FieldLen>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Input Product Catalog</Name>
+          <DefaultAnnotationText>product_catalog.csv</DefaultAnnotationText>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 3. Input Data: Store dim -->
+    <Node ToolID="3">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="54" y="340" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/stores.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Input Stores</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 4. Filter: Keep last 24 months of data and amount > 0 -->
+    <Node ToolID="4">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+        <Position x="200" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>Custom</Mode>
+          <Expression>[transaction_date] &gt;= DateTimeAdd(DateTimeToday(),-24,"months") AND ToNumber([quantity]) &gt; 0</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Filter Recent + Positive Qty</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+    </Node>
+
+    <!-- 5. DateTime: Parse transaction_date string -> DateTime -->
+    <Node ToolID="5">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DateTime.DateTime">
+        <Position x="346" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <IsFrom>True</IsFrom>
+          <InputFieldName>transaction_date</InputFieldName>
+          <OutputFieldName>txn_date_parsed</OutputFieldName>
+          <Format>yyyy-MM-dd HH:mm:ss</Format>
+          <Language>English</Language>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Parse Date</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDateTime" />
+    </Node>
+
+    <!-- 6. Formula: Derive net_amount, year, month, weekday, is_weekend -->
+    <Node ToolID="6">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+        <Position x="492" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FormulaFields>
+            <FormulaField expression="ToNumber([quantity]) * ToNumber([unit_price]) * (1 - ToNumber([discount_pct]))" field="net_amount" size="8" type="Double" />
+            <FormulaField expression="DateTimeYear([txn_date_parsed])" field="txn_year" size="4" type="Int32" />
+            <FormulaField expression="DateTimeMonth([txn_date_parsed])" field="txn_month" size="4" type="Int32" />
+            <FormulaField expression="DateTimeFormat([txn_date_parsed], '%A')" field="txn_weekday" size="32" type="V_WString" />
+            <FormulaField expression="IIF(DateTimeFormat([txn_date_parsed], '%a') IN ('Sat','Sun'), 1, 0)" field="is_weekend" size="4" type="Int32" />
+            <FormulaField expression="Uppercase(Trim([payment_method]))" field="payment_method_clean" size="32" type="V_WString" />
+          </FormulaFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Derive Net Amount + Date Parts</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+    </Node>
+
+    <!-- 7. RegEx: Parse product_code like "ABC-1234-XYZ" -> category, sku, variant -->
+    <Node ToolID="7">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RegEx.RegEx">
+        <Position x="638" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Field>product_code</Field>
+          <CaseInsensitive>True</CaseInsensitive>
+          <Method>ParseSimple</Method>
+          <Expression>^([A-Z]{2,4})-(\d{3,5})-([A-Z0-9]{2,4})$</Expression>
+          <ParseSimple>
+            <FieldList>
+              <Field name="pc_category" size="16" type="V_WString" />
+              <Field name="pc_sku" size="16" type="V_WString" />
+              <Field name="pc_variant" size="16" type="V_WString" />
+            </FieldList>
+          </ParseSimple>
+          <ErrorHandling>0</ErrorHandling>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>RegEx Parse Product Code</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRegEx" />
+    </Node>
+
+    <!-- 8. Text To Columns: Split customer_name "Last, First" -> last, first -->
+    <Node ToolID="8">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextToColumns.TextToColumns">
+        <Position x="784" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Field>customer_name</Field>
+          <Delimeters Token="False">,</Delimeters>
+          <SplitMethod>Columns</SplitMethod>
+          <NumFields>2</NumFields>
+          <RootName>cust_name_part</RootName>
+          <ExtraChars>LeaveExtraInLastField</ExtraChars>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Split Customer Name</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextToColumns" />
+    </Node>
+
+    <!-- 9. Multi-Field Formula: TrimAll string fields -->
+    <Node ToolID="9">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MultiFieldFormula.MultiFieldFormula">
+        <Position x="930" y="54" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Type>String</Type>
+          <ChangeFieldTypes>False</ChangeFieldTypes>
+          <Fields>
+            <Field name="cust_name_part1" selected="True" />
+            <Field name="cust_name_part2" selected="True" />
+            <Field name="payment_method_clean" selected="True" />
+          </Fields>
+          <Expression>TrimLeft(TrimRight([_CurrentField_]))</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Trim All Strings</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMultiFieldFormula" />
+    </Node>
+
+    <!-- 10. Join: transactions <-> product_catalog on product_id -->
+    <Node ToolID="10">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+        <Position x="1076" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration joinByRecordPos="False">
+          <JoinInfo connection="Left">
+            <Field field="product_id" />
+          </JoinInfo>
+          <JoinInfo connection="Right">
+            <Field field="product_id" />
+          </JoinInfo>
+          <SelectConfiguration>
+            <Configuration outputConnection="Join">
+              <OrderChanged value="False" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="*Unknown" selected="True" />
+              </SelectFields>
+            </Configuration>
+          </SelectConfiguration>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Join Products</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+    </Node>
+
+    <!-- 11. Find Replace: standardize product_name from lookup table -->
+    <Node ToolID="11">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.FindReplace.FindReplace">
+        <Position x="1222" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FindWithinField>product_name</FindWithinField>
+          <FindWhere>WholeString</FindWhere>
+          <FindFieldRef>product_name_old</FindFieldRef>
+          <ReplaceWith>True</ReplaceWith>
+          <ReplaceFieldRef>product_name_new</ReplaceFieldRef>
+          <CaseSensitive>False</CaseSensitive>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Standardize Product Names</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFindReplace" />
+    </Node>
+
+    <!-- 12. Imputation: fill missing unit_price with median -->
+    <Node ToolID="12">
+      <GuiSettings Plugin="Imputation_v3">
+        <Position x="1368" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Fields>
+            <Field name="unit_price" />
+          </Fields>
+          <IncomingValue type="Null" />
+          <ReplaceValue type="Median" />
+          <AddIndicator>True</AddIndicator>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Impute Missing Prices</Name>
+        </Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 13. Append Fields: cross-join with currency rates (1-row lookup) -->
+    <Node ToolID="13">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AppendFields.AppendFields">
+        <Position x="1514" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SelectConfiguration>
+            <Configuration>
+              <OrderChanged value="False" />
+              <SelectFields>
+                <SelectField field="*Unknown" selected="True" />
+              </SelectFields>
+            </Configuration>
+          </SelectConfiguration>
+          <WarnOnSizeLimit>16</WarnOnSizeLimit>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Append FX Rates</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxAppendFields" />
+    </Node>
+
+    <!-- 14. Sort: by customer_id, txn_date_parsed -->
+    <Node ToolID="14">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Sort.Sort">
+        <Position x="1660" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SortInfo>
+            <Field field="customer_id" order="Ascending" />
+            <Field field="txn_date_parsed" order="Ascending" />
+          </SortInfo>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Sort by Customer, Date</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSort" />
+    </Node>
+
+    <!-- 15. Multi-Row Formula: running customer balance and days_since_prev_txn -->
+    <Node ToolID="15">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MultiRowFormula.MultiRowFormula">
+        <Position x="1806" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UpdateField>False</UpdateField>
+          <CreateField>True</CreateField>
+          <CreateFieldName>cust_running_total</CreateFieldName>
+          <CreateFieldType>Double</CreateFieldType>
+          <CreateFieldSize>8</CreateFieldSize>
+          <GroupByFields>
+            <Field field="customer_id" />
+          </GroupByFields>
+          <NumRows>1</NumRows>
+          <ValuesForRowsThatDontExist>NULL</ValuesForRowsThatDontExist>
+          <Expression>IIF(IsNull([Row-1:cust_running_total]), [net_amount], [Row-1:cust_running_total] + [net_amount])</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Running Customer Total</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMultiRowFormula" />
+    </Node>
+
+    <!-- 16. Unique: dedupe on transaction_id -->
+    <Node ToolID="16">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Unique.Unique">
+        <Position x="1952" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UniqueFields>
+            <Field field="transaction_id" />
+          </UniqueFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Dedupe Txn IDs</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnique" />
+    </Node>
+
+    <!-- 17. Tile: bucket customers into deciles by cust_running_total -->
+    <Node ToolID="17">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Tile.Tile">
+        <Position x="2098" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Method>EqualRecords</Method>
+          <NumTiles>10</NumTiles>
+          <SortField field="cust_running_total" order="Descending" />
+          <TileFieldName>customer_decile</TileFieldName>
+          <SequenceFieldName>customer_decile_seq</SequenceFieldName>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Customer Decile</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTile" />
+    </Node>
+
+    <!-- 18. Join: enrich with store dim -->
+    <Node ToolID="18">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+        <Position x="2244" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration joinByRecordPos="False">
+          <JoinInfo connection="Left">
+            <Field field="store_id" />
+          </JoinInfo>
+          <JoinInfo connection="Right">
+            <Field field="store_id" />
+          </JoinInfo>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Join Stores</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+    </Node>
+
+    <!-- 19. Running Total: cumulative store sales -->
+    <Node ToolID="19">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RunningTotal.RunningTotal">
+        <Position x="2390" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupByFields>
+            <Field field="store_id" />
+          </GroupByFields>
+          <RunningTotalFields>
+            <Field field="net_amount" />
+          </RunningTotalFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Running Store Sales</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRunningTotal" />
+    </Node>
+
+    <!-- 20. Summarize: aggregate to store/category/month -->
+    <Node ToolID="20">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Summarize.Summarize">
+        <Position x="2536" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SummarizeFields>
+            <SummarizeField field="store_id" action="GroupBy" />
+            <SummarizeField field="store_region" action="GroupBy" />
+            <SummarizeField field="pc_category" action="GroupBy" />
+            <SummarizeField field="txn_year" action="GroupBy" />
+            <SummarizeField field="txn_month" action="GroupBy" />
+            <SummarizeField field="transaction_id" action="Count" rename="txn_count" />
+            <SummarizeField field="customer_id" action="CountDistinct" rename="unique_customers" />
+            <SummarizeField field="net_amount" action="Sum" rename="total_revenue" />
+            <SummarizeField field="net_amount" action="Avg" rename="avg_basket" />
+            <SummarizeField field="net_amount" action="Min" rename="min_amount" />
+            <SummarizeField field="net_amount" action="Max" rename="max_amount" />
+            <SummarizeField field="quantity" action="Sum" rename="total_units" />
+          </SummarizeFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Aggregate to Store/Category/Month</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+    </Node>
+
+    <!-- 21. Cross Tab: pivot category vs month -->
+    <Node ToolID="21">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.CrossTab.CrossTab">
+        <Position x="2682" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupFields>
+            <Field field="store_id" />
+            <Field field="store_region" />
+            <Field field="pc_category" />
+          </GroupFields>
+          <HeaderField field="txn_month" />
+          <DataField field="total_revenue" />
+          <Methods>
+            <Method method="Sum" />
+          </Methods>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Pivot Revenue by Month</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxCrossTab" />
+    </Node>
+
+    <!-- 22. Transpose: wide store-month back to long for reporting -->
+    <Node ToolID="22">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Transpose.Transpose">
+        <Position x="2828" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <KeyFields>
+            <Field field="store_id" />
+            <Field field="store_region" />
+            <Field field="pc_category" />
+          </KeyFields>
+          <DataFields>
+            <Field field="*Unknown" selected="True" />
+          </DataFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Transpose Back to Long</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTranspose" />
+    </Node>
+
+    <!-- 23. Generate Rows: build date dimension 2024-01-01 -> 2026-12-31 -->
+    <Node ToolID="23">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.GenerateRows.GenerateRows">
+        <Position x="200" y="500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <InitField name="cal_date" type="Date" size="10">
+            <InitExpression>'2024-01-01'</InitExpression>
+          </InitField>
+          <LoopExpression>DateTimeAdd([cal_date], 1, 'days')</LoopExpression>
+          <ConditionExpression>[cal_date] &lt;= '2026-12-31'</ConditionExpression>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Generate Date Dimension</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxGenerateRows" />
+    </Node>
+
+    <!-- 24. Union: combine summary + transposed result -->
+    <Node ToolID="24">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Union.Union">
+        <Position x="2974" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>Auto</Mode>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Union Summary Streams</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnion" />
+    </Node>
+
+    <!-- 25. Sample: top 1000 rows for QA -->
+    <Node ToolID="25">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Sample.Sample">
+        <Position x="3120" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>First</Mode>
+          <N>1000</N>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Sample Top 1000</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSample" />
+    </Node>
+
+    <!-- 26. Select: final column selection + renames -->
+    <Node ToolID="26">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+        <Position x="3266" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <OrderChanged value="True" />
+          <SelectFields>
+            <SelectField field="store_id" selected="True" rename="store_id" />
+            <SelectField field="store_region" selected="True" rename="region" />
+            <SelectField field="pc_category" selected="True" rename="category" />
+            <SelectField field="txn_year" selected="True" rename="year" />
+            <SelectField field="txn_month" selected="True" rename="month" />
+            <SelectField field="total_revenue" selected="True" rename="revenue" />
+            <SelectField field="avg_basket" selected="True" rename="avg_basket_value" />
+            <SelectField field="unique_customers" selected="True" />
+            <SelectField field="txn_count" selected="True" />
+            <SelectField field="*Unknown" selected="False" />
+          </SelectFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Final Select</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+    </Node>
+
+    <!-- 27. Output Data: write final aggregated CSV -->
+    <Node ToolID="27">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="3412" y="100" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_store_category_monthly.csv</File>
+          <FormatSpecificOptions>
+            <LineEndStyle>CRLF</LineEndStyle>
+            <Delimeter>,</Delimeter>
+            <ForceQuotes>False</ForceQuotes>
+            <HeaderRow>True</HeaderRow>
+            <CodePage>65001</CodePage>
+            <WriteBOM>True</WriteBOM>
+            <QuoteOutputFields>NewLinesAndQuotes</QuoteOutputFields>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Write Aggregated Output</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 28. Output Data: write enriched line-level CSV -->
+    <Node ToolID="28">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="3412" y="300" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_enriched_transactions.csv</File>
+          <FormatSpecificOptions>
+            <LineEndStyle>CRLF</LineEndStyle>
+            <Delimeter>,</Delimeter>
+            <HeaderRow>True</HeaderRow>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Write Enriched Transactions</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 29. Text Input: currency reference table (1 row) used by Append Fields -->
+    <Node ToolID="29">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+        <Position x="900" y="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <NumRows value="1" />
+          <Fields>
+            <Field name="base_currency" />
+            <Field name="fx_rate_aud_to_eur" />
+          </Fields>
+          <Data>
+            <r>
+              <c>AUD</c>
+              <c>0.62</c>
+            </r>
+          </Data>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>FX Rate Lookup</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+    </Node>
+
+    <!-- 30. Text Input: product-name standardization mapping for Find Replace -->
+    <Node ToolID="30">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+        <Position x="900" y="500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <NumRows value="4" />
+          <Fields>
+            <Field name="product_name_old" />
+            <Field name="product_name_new" />
+          </Fields>
+          <Data>
+            <r><c>Cola 1L</c><c>Cola - 1 Liter</c></r>
+            <r><c>Choc Bar</c><c>Chocolate Bar 100g</c></r>
+            <r><c>Bread Wht</c><c>White Bread Loaf</c></r>
+            <r><c>Milk2pc</c><c>Milk 2% 2L</c></r>
+          </Data>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name>Product Name Mapping</Name>
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+    </Node>
+
+  </Nodes>
+
+  <Connections>
+    <Connection>
+      <Origin ToolID="1" Connection="Output" />
+      <Destination ToolID="4" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="4" Connection="True" />
+      <Destination ToolID="5" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="5" Connection="Output" />
+      <Destination ToolID="6" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="6" Connection="Output" />
+      <Destination ToolID="7" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="7" Connection="Output" />
+      <Destination ToolID="8" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="8" Connection="Output" />
+      <Destination ToolID="9" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="9" Connection="Output" />
+      <Destination ToolID="10" Connection="Left" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="2" Connection="Output" />
+      <Destination ToolID="10" Connection="Right" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="10" Connection="Join" />
+      <Destination ToolID="11" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="30" Connection="Output" />
+      <Destination ToolID="11" Connection="Lookup" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="11" Connection="Output" />
+      <Destination ToolID="12" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="12" Connection="Output" />
+      <Destination ToolID="13" Connection="Targets" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="29" Connection="Output" />
+      <Destination ToolID="13" Connection="Source" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="13" Connection="Output" />
+      <Destination ToolID="14" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="14" Connection="Output" />
+      <Destination ToolID="15" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="15" Connection="Output" />
+      <Destination ToolID="16" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="16" Connection="Unique" />
+      <Destination ToolID="17" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="17" Connection="Output" />
+      <Destination ToolID="18" Connection="Left" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="3" Connection="Output" />
+      <Destination ToolID="18" Connection="Right" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="18" Connection="Join" />
+      <Destination ToolID="19" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="19" Connection="Output" />
+      <Destination ToolID="28" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="19" Connection="Output" />
+      <Destination ToolID="20" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="20" Connection="Output" />
+      <Destination ToolID="21" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="21" Connection="Output" />
+      <Destination ToolID="22" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="20" Connection="Output" />
+      <Destination ToolID="24" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="22" Connection="Output" />
+      <Destination ToolID="24" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="24" Connection="Output" />
+      <Destination ToolID="25" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="25" Connection="Output" />
+      <Destination ToolID="26" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="26" Connection="Output" />
+      <Destination ToolID="27" Connection="Input" />
+    </Connection>
+  </Connections>
+
+  <Properties>
+    <Memory default="True" />
+    <GlobalRecordLimit value="0" />
+    <TempFiles default="True" />
+    <Annotation on="True" includeToolName="False" />
+    <ConvErrorLimit value="10" />
+    <ConvErrorLimit_Stop value="False" />
+    <CancelOnError value="False" />
+    <DisableBrowse value="False" />
+    <EnablePerformanceProfiling value="False" />
+    <DisableAllOutput value="False" />
+    <ShowAllMacroMessages value="False" />
+    <ShowConnectionStatusIsOn value="True" />
+    <ShowConnectionStatusOnlyWhenRunning value="True" />
+    <ZoomLevel value="50" />
+    <MetaInfo>
+      <NameIsFileName value="True" />
+      <Name>RetailAnalyticsComplex</Name>
+      <Description>Synthetic retail analytics workflow exercising ~25 Alteryx tools for migration testing to Databricks Lakeflow SDP.</Description>
+      <RootToolName />
+      <ToolVersion />
+      <ToolInDb value="False" />
+      <CategoryName />
+      <SearchTags />
+      <Author>Aldi Sud Migration Demo</Author>
+      <Company>Databricks Field Engineering</Company>
+      <Copyright />
+    </MetaInfo>
+  </Properties>
+</AlteryxDocument>

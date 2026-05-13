@@ -1,0 +1,1400 @@
+<?xml version="1.0"?>
+<AlteryxDocument yxmdVer="2023.1">
+  <Nodes>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 1: Ingest + Initial Cleansing                       -->
+    <!-- ============================================================ -->
+    <Node ToolID="100">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="30" width="900" height="540" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>1. Ingest &amp; Cleanse</Caption>
+          <Style TextColor="#314c4a" FillColor="#d4e8e8" BorderColor="#314c4a" Transparency="50" Margin="25" />
+          <Disabled value="False" />
+          <Folded value="False" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="1" />
+        <Node ToolID="2" />
+        <Node ToolID="3" />
+        <Node ToolID="4" />
+        <Node ToolID="5" />
+        <Node ToolID="6" />
+        <Node ToolID="7" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 1. Input: transactions -->
+    <Node ToolID="1">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="60" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/transactions.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Input Transactions (20M)</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 2. Input: product catalog -->
+    <Node ToolID="2">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="60" y="200" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/product_catalog.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Input Product Catalog</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 3. Input: stores -->
+    <Node ToolID="3">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileInput.DbFileInput">
+        <Position x="60" y="320" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File OutputFileName="" RecordLimit="" SearchSubDirs="False" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/stores.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Input Stores</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileInput" />
+    </Node>
+
+    <!-- 4. Record ID: add row_id -->
+    <Node ToolID="4">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RecordID.RecordID">
+        <Position x="200" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FieldName>row_id</FieldName>
+          <StartValue>1</StartValue>
+          <FieldType>Int64</FieldType>
+          <FieldSize>8</FieldSize>
+          <Position>Beginning</Position>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Add Record ID</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRecordID" />
+    </Node>
+
+    <!-- 5. Auto Field: optimize field types -->
+    <Node ToolID="5">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AutoField.AutoField">
+        <Position x="320" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Fields>
+            <Field name="*Unknown" selected="True" />
+          </Fields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Auto Field</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxAutoField" />
+    </Node>
+
+    <!-- 6. Data Cleansing: remove special chars, normalize case -->
+    <Node ToolID="6">
+      <GuiSettings Plugin="DataCleansing_v3">
+        <Position x="440" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Fields>
+            <Field name="customer_name" selected="True" />
+            <Field name="payment_method" selected="True" />
+          </Fields>
+          <RemoveNullRows>False</RemoveNullRows>
+          <RemoveNullColumns>False</RemoveNullColumns>
+          <ReplaceNulls>True</ReplaceNulls>
+          <ReplaceNullsWith />
+          <RemoveWhitespace>True</RemoveWhitespace>
+          <RemoveDuplicateWhitespace>True</RemoveDuplicateWhitespace>
+          <RemoveLetters>False</RemoveLetters>
+          <RemoveNumbers>False</RemoveNumbers>
+          <RemovePunctuation>True</RemovePunctuation>
+          <ModifyCase>True</ModifyCase>
+          <Case>TitleCase</Case>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Data Cleansing</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 7. Filter: positive quantity & non-null price -->
+    <Node ToolID="7">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+        <Position x="560" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>Custom</Mode>
+          <Expression>ToNumber([quantity]) &gt; 0 AND !IsNull([unit_price])</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Filter Valid Rows</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 2: Parsing & Enrichment                              -->
+    <!-- ============================================================ -->
+    <Node ToolID="200">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="950" y="30" width="1100" height="540" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>2. Parse, Join &amp; Enrich</Caption>
+          <Style TextColor="#314c4a" FillColor="#e8e0d4" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="8" />
+        <Node ToolID="9" />
+        <Node ToolID="10" />
+        <Node ToolID="11" />
+        <Node ToolID="12" />
+        <Node ToolID="13" />
+        <Node ToolID="14" />
+        <Node ToolID="15" />
+        <Node ToolID="16" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 8. DateTime: parse transaction_date -->
+    <Node ToolID="8">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DateTime.DateTime">
+        <Position x="980" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <IsFrom>True</IsFrom>
+          <InputFieldName>transaction_date</InputFieldName>
+          <OutputFieldName>txn_dt</OutputFieldName>
+          <Format>yyyy-MM-dd HH:mm:ss</Format>
+          <Language>English</Language>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Parse Date</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDateTime" />
+    </Node>
+
+    <!-- 9. RegEx: parse product_code -->
+    <Node ToolID="9">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RegEx.RegEx">
+        <Position x="1100" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Field>product_code</Field>
+          <CaseInsensitive>True</CaseInsensitive>
+          <Method>ParseSimple</Method>
+          <Expression>^([A-Z]{2,4})-(\d{3,5})-([A-Z0-9]{2,4})$</Expression>
+          <ParseSimple>
+            <FieldList>
+              <Field name="pc_category" size="16" type="V_WString" />
+              <Field name="pc_sku" size="16" type="V_WString" />
+              <Field name="pc_variant" size="16" type="V_WString" />
+            </FieldList>
+          </ParseSimple>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Parse Product Code</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRegEx" />
+    </Node>
+
+    <!-- 10. Formula: net_amount + date parts + amount_aud_eur -->
+    <Node ToolID="10">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+        <Position x="1220" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FormulaFields>
+            <FormulaField expression="ToNumber([quantity]) * ToNumber([unit_price]) * (1 - ToNumber([discount_pct]))" field="net_amount" size="8" type="Double" />
+            <FormulaField expression="[net_amount] * 0.62" field="net_amount_eur" size="8" type="Double" />
+            <FormulaField expression="DateTimeYear([txn_dt])" field="txn_year" size="4" type="Int32" />
+            <FormulaField expression="DateTimeMonth([txn_dt])" field="txn_month" size="4" type="Int32" />
+            <FormulaField expression="ToDate([txn_dt])" field="txn_date_only" size="10" type="Date" />
+            <FormulaField expression="IIF([is_weekend]=1, 'WK', 'WD')" field="day_type" size="2" type="V_WString" />
+          </FormulaFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Derive Fields</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+    </Node>
+
+    <!-- 11. Text To Columns: split customer_name -->
+    <Node ToolID="11">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextToColumns.TextToColumns">
+        <Position x="1340" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Field>customer_name</Field>
+          <Delimeters Token="False">,</Delimeters>
+          <SplitMethod>Columns</SplitMethod>
+          <NumFields>2</NumFields>
+          <RootName>name_part</RootName>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Split Customer Name</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextToColumns" />
+    </Node>
+
+    <!-- 12. Multi-Field Formula: trim all string fields -->
+    <Node ToolID="12">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MultiFieldFormula.MultiFieldFormula">
+        <Position x="1460" y="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Type>String</Type>
+          <Fields>
+            <Field name="name_part1" selected="True" />
+            <Field name="name_part2" selected="True" />
+            <Field name="payment_method" selected="True" />
+          </Fields>
+          <Expression>TrimLeft(TrimRight([_CurrentField_]))</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Trim Strings</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMultiFieldFormula" />
+    </Node>
+
+    <!-- 13. Join: transactions + products -->
+    <Node ToolID="13">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+        <Position x="1580" y="120" />
+      </GuiSettings>
+      <Properties>
+        <Configuration joinByRecordPos="False">
+          <JoinInfo connection="Left"><Field field="product_id" /></JoinInfo>
+          <JoinInfo connection="Right"><Field field="product_id" /></JoinInfo>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Join Products</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+    </Node>
+
+    <!-- 14. Find Replace: standardize product_name -->
+    <Node ToolID="14">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.FindReplace.FindReplace">
+        <Position x="1700" y="120" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FindWithinField>product_name</FindWithinField>
+          <FindWhere>WholeString</FindWhere>
+          <FindFieldRef>product_name_old</FindFieldRef>
+          <ReplaceWith>True</ReplaceWith>
+          <ReplaceFieldRef>product_name_new</ReplaceFieldRef>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Standardize Names</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFindReplace" />
+    </Node>
+
+    <!-- 15. Imputation: fill missing prices with median -->
+    <Node ToolID="15">
+      <GuiSettings Plugin="Imputation_v3">
+        <Position x="1820" y="120" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Fields><Field name="unit_price" /></Fields>
+          <IncomingValue type="Null" />
+          <ReplaceValue type="Median" />
+          <AddIndicator>True</AddIndicator>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Impute</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 16. Join: enriched txn + stores -->
+    <Node ToolID="16">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+        <Position x="1940" y="120" />
+      </GuiSettings>
+      <Properties>
+        <Configuration joinByRecordPos="False">
+          <JoinInfo connection="Left"><Field field="store_id" /></JoinInfo>
+          <JoinInfo connection="Right"><Field field="store_id" /></JoinInfo>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Join Stores</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 3: Customer Dedup (Fuzzy) + Grouping                -->
+    <!-- ============================================================ -->
+    <Node ToolID="300">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="600" width="900" height="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>3. Customer Dedup &amp; Grouping</Caption>
+          <Style TextColor="#314c4a" FillColor="#e8d4d4" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="17" />
+        <Node ToolID="18" />
+        <Node ToolID="19" />
+        <Node ToolID="20" />
+        <Node ToolID="21" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 17. Unique: dedupe on transaction_id -->
+    <Node ToolID="17">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Unique.Unique">
+        <Position x="60" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UniqueFields><Field field="transaction_id" /></UniqueFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Dedupe Txn ID</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnique" />
+    </Node>
+
+    <!-- 18. Fuzzy Match: customer_name (catch Smith vs Smyth) -->
+    <Node ToolID="18">
+      <GuiSettings Plugin="FuzzyMatch_v3">
+        <Position x="200" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <MatchMode>Purge</MatchMode>
+          <RecordIDField>row_id</RecordIDField>
+          <SourceField>customer_id</SourceField>
+          <MatchThreshold>80</MatchThreshold>
+          <MatchFields>
+            <MatchField fieldname="customer_name" matchstyle="Name" />
+            <MatchField fieldname="email" matchstyle="Address" />
+          </MatchFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Fuzzy Match Customers</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 19. Make Group: cluster equivalent customer records -->
+    <Node ToolID="19">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MakeGroup.MakeGroup">
+        <Position x="340" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupIdField>customer_group_id</GroupIdField>
+          <Fields>
+            <Field name="row_id" />
+            <Field name="row_id2" />
+          </Fields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Make Group</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMakeGroup" />
+    </Node>
+
+    <!-- 20. Sort: by customer_group_id, txn_dt -->
+    <Node ToolID="20">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Sort.Sort">
+        <Position x="480" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SortInfo>
+            <Field field="customer_group_id" order="Ascending" />
+            <Field field="txn_dt" order="Ascending" />
+          </SortInfo>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Sort</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSort" />
+    </Node>
+
+    <!-- 21. Multi-Row Formula: days since prior customer txn -->
+    <Node ToolID="21">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MultiRowFormula.MultiRowFormula">
+        <Position x="620" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UpdateField>False</UpdateField>
+          <CreateField>True</CreateField>
+          <CreateFieldName>days_since_prior</CreateFieldName>
+          <CreateFieldType>Int32</CreateFieldType>
+          <CreateFieldSize>4</CreateFieldSize>
+          <GroupByFields><Field field="customer_group_id" /></GroupByFields>
+          <NumRows>1</NumRows>
+          <ValuesForRowsThatDontExist>NULL</ValuesForRowsThatDontExist>
+          <Expression>DateTimeDiff([txn_dt], [Row-1:txn_dt], 'days')</Expression>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Days Since Prior Txn</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMultiRowFormula" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 4: Geospatial (Stores + Trade Areas)                -->
+    <!-- ============================================================ -->
+    <Node ToolID="400">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="950" y="600" width="1100" height="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>4. Geospatial Analytics</Caption>
+          <Style TextColor="#314c4a" FillColor="#d4d4e8" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="22" />
+        <Node ToolID="23" />
+        <Node ToolID="24" />
+        <Node ToolID="25" />
+        <Node ToolID="26" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 22. Formula: assign synthetic lat/lon to stores based on region -->
+    <Node ToolID="22">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+        <Position x="980" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FormulaFields>
+            <FormulaField field="store_lat" size="8" type="Double" expression="Switch([store_region], -33.86, 'AUS-NSW', -33.86, 'AUS-VIC', -37.81, 'AUS-QLD', -27.47, 'AUS-WA', -31.95, 'AUS-SA', -34.93, 'AUS-TAS', -42.88, 'AUS-ACT', -35.28, 'AUS-NT', -12.46)" />
+            <FormulaField field="store_lon" size="8" type="Double" expression="Switch([store_region], 151.21, 'AUS-NSW', 151.21, 'AUS-VIC', 144.96, 'AUS-QLD', 153.03, 'AUS-WA', 115.86, 'AUS-SA', 138.60, 'AUS-TAS', 147.33, 'AUS-ACT', 149.13, 'AUS-NT', 130.84)" />
+          </FormulaFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Assign Lat/Lon</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+    </Node>
+
+    <!-- 23. Create Points: build SpatialObj from lat/lon -->
+    <Node ToolID="23">
+      <GuiSettings Plugin="AlteryxSpatialPluginsGui.CreatePoints.CreatePoints">
+        <Position x="1120" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <LongFieldName>store_lon</LongFieldName>
+          <LatFieldName>store_lat</LatFieldName>
+          <OutputFieldName>store_point</OutputFieldName>
+          <SR>WGS84</SR>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Create Store Points</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxSpatialPluginsEngine.dll" EngineDllEntryPoint="AlteryxCreatePoints" />
+    </Node>
+
+    <!-- 24. Buffer: 5 km trade area around each store -->
+    <Node ToolID="24">
+      <GuiSettings Plugin="AlteryxSpatialPluginsGui.Buffer.Buffer">
+        <Position x="1260" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SpatialField>store_point</SpatialField>
+          <BufferDistance>5</BufferDistance>
+          <BufferUnits>Kilometers</BufferUnits>
+          <OutputFieldName>store_trade_area</OutputFieldName>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>5km Buffer (Trade Area)</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxSpatialPluginsEngine.dll" EngineDllEntryPoint="AlteryxBuffer" />
+    </Node>
+
+    <!-- 25. Find Nearest: nearest store per transaction (via synthetic txn-point) -->
+    <Node ToolID="25">
+      <GuiSettings Plugin="FindNearest_v3">
+        <Position x="1400" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TargetField>store_point</TargetField>
+          <UniverseField>store_point</UniverseField>
+          <MaxDistance>50</MaxDistance>
+          <MaxDistanceUnits>Kilometers</MaxDistanceUnits>
+          <NumberOfNeighbors>3</NumberOfNeighbors>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Find Nearest 3 Stores</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 26. Spatial Match: which transactions fall in which trade area -->
+    <Node ToolID="26">
+      <GuiSettings Plugin="AlteryxSpatialPluginsGui.SpatialMatch.SpatialMatch">
+        <Position x="1540" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UniverseField>store_trade_area</UniverseField>
+          <TargetField>store_point</TargetField>
+          <MatchType>Intersects</MatchType>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Spatial Match Txn->Area</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxSpatialPluginsEngine.dll" EngineDllEntryPoint="AlteryxSpatialMatch" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 5: Aggregation + Stats                              -->
+    <!-- ============================================================ -->
+    <Node ToolID="500">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="1010" width="900" height="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>5. Aggregation, Stats &amp; Pivots</Caption>
+          <Style TextColor="#314c4a" FillColor="#e8e8d4" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="27" />
+        <Node ToolID="28" />
+        <Node ToolID="29" />
+        <Node ToolID="30" />
+        <Node ToolID="31" />
+        <Node ToolID="32" />
+        <Node ToolID="33" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 27. Count Records -->
+    <Node ToolID="27">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.CountRecords.CountRecords">
+        <Position x="60" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FieldName>total_txn_count</FieldName>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Count Records</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxCountRecords" />
+    </Node>
+
+    <!-- 28. Running Total: cumulative store sales -->
+    <Node ToolID="28">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RunningTotal.RunningTotal">
+        <Position x="200" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupByFields><Field field="store_id" /></GroupByFields>
+          <RunningTotalFields><Field field="net_amount" /></RunningTotalFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Running Store Sales</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRunningTotal" />
+    </Node>
+
+    <!-- 29. Weighted Average: basket size weighted by quantity per region -->
+    <Node ToolID="29">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.WeightedAverage.WeightedAverage">
+        <Position x="340" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupByFields><Field field="store_region" /></GroupByFields>
+          <ValueField>net_amount</ValueField>
+          <WeightField>quantity</WeightField>
+          <OutputFieldName>weighted_basket</OutputFieldName>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Weighted Avg Basket</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxWeightedAverage" />
+    </Node>
+
+    <!-- 30. Tile: customer decile by net_amount -->
+    <Node ToolID="30">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Tile.Tile">
+        <Position x="480" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Method>EqualRecords</Method>
+          <NumTiles>10</NumTiles>
+          <SortField field="net_amount" order="Descending" />
+          <TileFieldName>customer_decile</TileFieldName>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Customer Decile</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTile" />
+    </Node>
+
+    <!-- 31. Summarize: rollup by store/category/month -->
+    <Node ToolID="31">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Summarize.Summarize">
+        <Position x="620" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SummarizeFields>
+            <SummarizeField field="store_id" action="GroupBy" />
+            <SummarizeField field="store_region" action="GroupBy" />
+            <SummarizeField field="pc_category" action="GroupBy" />
+            <SummarizeField field="txn_year" action="GroupBy" />
+            <SummarizeField field="txn_month" action="GroupBy" />
+            <SummarizeField field="transaction_id" action="Count" rename="txn_count" />
+            <SummarizeField field="customer_id" action="CountDistinct" rename="unique_customers" />
+            <SummarizeField field="net_amount" action="Sum" rename="total_revenue" />
+            <SummarizeField field="net_amount" action="Avg" rename="avg_basket" />
+            <SummarizeField field="net_amount" action="StdDev" rename="stddev_basket" />
+            <SummarizeField field="net_amount" action="Median" rename="median_basket" />
+            <SummarizeField field="quantity" action="Sum" rename="total_units" />
+          </SummarizeFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Aggregate Store/Cat/Month</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+    </Node>
+
+    <!-- 32. Cross Tab: pivot months -->
+    <Node ToolID="32">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.CrossTab.CrossTab">
+        <Position x="760" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <GroupFields>
+            <Field field="store_id" />
+            <Field field="store_region" />
+            <Field field="pc_category" />
+          </GroupFields>
+          <HeaderField field="txn_month" />
+          <DataField field="total_revenue" />
+          <Methods><Method method="Sum" /></Methods>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Pivot by Month</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxCrossTab" />
+    </Node>
+
+    <!-- 33. Transpose: pivot back to long -->
+    <Node ToolID="33">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Transpose.Transpose">
+        <Position x="860" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <KeyFields>
+            <Field field="store_id" />
+            <Field field="pc_category" />
+          </KeyFields>
+          <DataFields><Field field="*Unknown" selected="True" /></DataFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Transpose to Long</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTranspose" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 6: Predictive ML — Linear Regression                -->
+    <!-- ============================================================ -->
+    <Node ToolID="600">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="950" y="1010" width="1100" height="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>6. Predictive ML</Caption>
+          <Style TextColor="#314c4a" FillColor="#d4e8d4" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="34" />
+        <Node ToolID="35" />
+        <Node ToolID="36" />
+        <Node ToolID="37" />
+        <Node ToolID="38" />
+        <Node ToolID="39" />
+        <Node ToolID="40" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 34. Random %Sample: take 10% for ML modeling -->
+    <Node ToolID="34">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.RandomSample.RandomSample">
+        <Position x="980" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>RandomPercent</Mode>
+          <Percent>10</Percent>
+          <Seed>42</Seed>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Random 10%</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxRandomSample" />
+    </Node>
+
+    <!-- 35. Oversample Field: balance day_type (WK vs WD) -->
+    <Node ToolID="35">
+      <GuiSettings Plugin="OversampleField_v3">
+        <Position x="1100" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Field>day_type</Field>
+          <Value>WK</Value>
+          <Percent>50</Percent>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Oversample Weekend</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 36. Create Samples: 70/15/15 train/val/test -->
+    <Node ToolID="36">
+      <GuiSettings Plugin="CreateSamples_v3">
+        <Position x="1220" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <EstimationPercent>70</EstimationPercent>
+          <ValidationPercent>15</ValidationPercent>
+          <HoldoutPercent>15</HoldoutPercent>
+          <Seed>42</Seed>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Train/Val/Test Split</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 37. Linear Regression: predict net_amount -->
+    <Node ToolID="37">
+      <GuiSettings Plugin="LinearRegression_v3">
+        <Position x="1340" y="1040" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <ModelName>RevenueLinearRegression</ModelName>
+          <TargetField>net_amount</TargetField>
+          <PredictorFields>
+            <Field name="quantity" />
+            <Field name="unit_price" />
+            <Field name="discount_pct" />
+            <Field name="is_weekend" />
+            <Field name="pc_category" />
+            <Field name="store_region" />
+          </PredictorFields>
+          <UseSampleWeights>False</UseSampleWeights>
+          <DisplayReport>True</DisplayReport>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Linear Regression</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 38. Score: apply LR model to test set -->
+    <Node ToolID="38">
+      <GuiSettings Plugin="Score_v3">
+        <Position x="1460" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <ModelName>RevenueLinearRegression</ModelName>
+          <ScoreFieldName>predicted_net_amount</ScoreFieldName>
+          <IncludeProbabilities>False</IncludeProbabilities>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Score Test Set</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 39. Formula: residuals -->
+    <Node ToolID="39">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+        <Position x="1580" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FormulaFields>
+            <FormulaField field="residual" size="8" type="Double" expression="[net_amount] - [predicted_net_amount]" />
+            <FormulaField field="abs_pct_error" size="8" type="Double" expression="Abs([residual]) / [net_amount]" />
+          </FormulaFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Residuals</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+    </Node>
+
+    <!-- 40. Summarize: model metrics (MAE, MAPE, RMSE) -->
+    <Node ToolID="40">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Summarize.Summarize">
+        <Position x="1700" y="1060" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SummarizeFields>
+            <SummarizeField field="residual" action="Avg" rename="ME" />
+            <SummarizeField field="residual" action="StdDev" rename="RMSE_proxy" />
+            <SummarizeField field="abs_pct_error" action="Avg" rename="MAPE" />
+            <SummarizeField field="abs_pct_error" action="Max" rename="MaxAPE" />
+            <SummarizeField field="residual" action="Count" rename="n_scored" />
+          </SummarizeFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Model Quality Metrics</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 7: Time Series Forecasting                          -->
+    <!-- ============================================================ -->
+    <Node ToolID="700">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="30" y="1420" width="900" height="380" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>7. Time Series Forecast</Caption>
+          <Style TextColor="#314c4a" FillColor="#f0d4e8" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="41" />
+        <Node ToolID="42" />
+        <Node ToolID="43" />
+        <Node ToolID="44" />
+        <Node ToolID="45" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 41. Summarize: daily revenue -->
+    <Node ToolID="41">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Summarize.Summarize">
+        <Position x="60" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <SummarizeFields>
+            <SummarizeField field="txn_date_only" action="GroupBy" />
+            <SummarizeField field="net_amount" action="Sum" rename="daily_revenue" />
+            <SummarizeField field="transaction_id" action="Count" rename="daily_txns" />
+          </SummarizeFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Daily Revenue</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSummarize" />
+    </Node>
+
+    <!-- 42. Generate Rows: full calendar -->
+    <Node ToolID="42">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.GenerateRows.GenerateRows">
+        <Position x="200" y="1600" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <InitField name="cal_date" type="Date" size="10">
+            <InitExpression>'2024-01-01'</InitExpression>
+          </InitField>
+          <LoopExpression>DateTimeAdd([cal_date], 1, 'days')</LoopExpression>
+          <ConditionExpression>[cal_date] &lt;= '2026-12-31'</ConditionExpression>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Date Calendar</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxGenerateRows" />
+    </Node>
+
+    <!-- 43. Join: fill missing dates -->
+    <Node ToolID="43">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Join.Join">
+        <Position x="340" y="1500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration joinByRecordPos="False">
+          <JoinInfo connection="Left"><Field field="cal_date" /></JoinInfo>
+          <JoinInfo connection="Right"><Field field="txn_date_only" /></JoinInfo>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Join Calendar</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJoin" />
+    </Node>
+
+    <!-- 44. TS Plot: visualize daily revenue with seasonality -->
+    <Node ToolID="44">
+      <GuiSettings Plugin="TS_Plot_v3">
+        <Position x="480" y="1500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <TargetField>daily_revenue</TargetField>
+          <DateField>cal_date</DateField>
+          <Frequency>Daily</Frequency>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>TS Plot</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 45. TS Forecast: ARIMA 30-day forecast -->
+    <Node ToolID="45">
+      <GuiSettings Plugin="ARIMA_v3">
+        <Position x="620" y="1500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <ModelName>DailyRevenueARIMA</ModelName>
+          <TargetField>daily_revenue</TargetField>
+          <DateField>cal_date</DateField>
+          <Frequency>Daily</Frequency>
+          <ForecastHorizon>30</ForecastHorizon>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>ARIMA Forecast (30d)</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- ============================================================ -->
+    <!-- CONTAINER 8: Developer + Flow Control + Output                -->
+    <!-- ============================================================ -->
+    <Node ToolID="800">
+      <GuiSettings Plugin="AlteryxGuiToolkit.ToolContainer.ToolContainer">
+        <Position x="950" y="1420" width="1100" height="500" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Caption>8. Developer, QA &amp; Output</Caption>
+          <Style TextColor="#314c4a" FillColor="#d4f0e8" BorderColor="#314c4a" Transparency="50" Margin="25" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+      <ChildNodes>
+        <Node ToolID="46" />
+        <Node ToolID="47" />
+        <Node ToolID="48" />
+        <Node ToolID="49" />
+        <Node ToolID="50" />
+        <Node ToolID="51" />
+        <Node ToolID="52" />
+        <Node ToolID="53" />
+        <Node ToolID="54" />
+        <Node ToolID="55" />
+        <Node ToolID="56" />
+      </ChildNodes>
+    </Node>
+
+    <!-- 46. Cache: cache aggregated stream for downstream re-use -->
+    <Node ToolID="46">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Cache.Cache">
+        <Position x="980" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>Persistent</Mode>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Cache Agg</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxCache" />
+    </Node>
+
+    <!-- 47. Test: assert non-empty output -->
+    <Node ToolID="47">
+      <GuiSettings Plugin="Test_v3">
+        <Position x="1100" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Tests>
+            <Test type="RecordCount" expression="&gt; 0" message="Final aggregate must have rows" />
+            <Test type="Expression" expression="[total_revenue] &gt;= 0" message="Revenue must be non-negative" />
+          </Tests>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>QA Tests</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 48. Message: log status to engine -->
+    <Node ToolID="48">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Message.Message">
+        <Position x="1220" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <When>BeforeRecords</When>
+          <Type>Info</Type>
+          <Expression>"Final aggregate ready"</Expression>
+          <Priority>Normal</Priority>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Log Status</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMessage" />
+    </Node>
+
+    <!-- 49. Block Until Done: gate downstream writes on prior output -->
+    <Node ToolID="49">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.BlockUntilDone.BlockUntilDone">
+        <Position x="1340" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration />
+        <Annotation DisplayMode="0"><Name>Block Until Done</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxBlockUntilDone" />
+    </Node>
+
+    <!-- 50. Union: combine ML scored + aggregate streams -->
+    <Node ToolID="50">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Union.Union">
+        <Position x="1460" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration><Mode>Auto</Mode></Configuration>
+        <Annotation DisplayMode="0"><Name>Union Streams</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxUnion" />
+    </Node>
+
+    <!-- 51. Append Fields: enrich with run metadata (1-row reference) -->
+    <Node ToolID="51">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AppendFields.AppendFields">
+        <Position x="1580" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration />
+        <Annotation DisplayMode="0"><Name>Append Run Meta</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxAppendFields" />
+    </Node>
+
+    <!-- 52. Sample: top 1000 -->
+    <Node ToolID="52">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Sample.Sample">
+        <Position x="1700" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>First</Mode>
+          <N>1000</N>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Sample Top 1000</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSample" />
+    </Node>
+
+    <!-- 53. Select: final columns -->
+    <Node ToolID="53">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+        <Position x="1820" y="1470" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <OrderChanged value="True" />
+          <SelectFields>
+            <SelectField field="store_id" selected="True" />
+            <SelectField field="store_region" selected="True" rename="region" />
+            <SelectField field="pc_category" selected="True" rename="category" />
+            <SelectField field="txn_year" selected="True" rename="year" />
+            <SelectField field="txn_month" selected="True" rename="month" />
+            <SelectField field="total_revenue" selected="True" rename="revenue" />
+            <SelectField field="avg_basket" selected="True" />
+            <SelectField field="stddev_basket" selected="True" />
+            <SelectField field="median_basket" selected="True" />
+            <SelectField field="unique_customers" selected="True" />
+            <SelectField field="txn_count" selected="True" />
+            <SelectField field="*Unknown" selected="False" />
+          </SelectFields>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Final Select</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+    </Node>
+
+    <!-- 54. Output: aggregated CSV -->
+    <Node ToolID="54">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="1940" y="1430" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_advanced_aggregate.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Write Aggregate</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 55. Output: ML scored CSV -->
+    <Node ToolID="55">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="1940" y="1550" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_ml_scored.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Write ML Scored</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 56. Output: forecast CSV -->
+    <Node ToolID="56">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="1940" y="1670" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_forecast_30d.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Write Forecast</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 57. Text Input: product name standardization mapping -->
+    <Node ToolID="57">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+        <Position x="1620" y="280" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <NumRows value="4" />
+          <Fields>
+            <Field name="product_name_old" />
+            <Field name="product_name_new" />
+          </Fields>
+          <Data>
+            <r><c>Cola 1L</c><c>Cola - 1 Liter</c></r>
+            <r><c>Choc Bar</c><c>Chocolate Bar 100g</c></r>
+            <r><c>Bread Wht</c><c>White Bread Loaf</c></r>
+            <r><c>Milk2pc</c><c>Milk 2% 2L</c></r>
+          </Data>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Product Name Lookup</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+    </Node>
+
+    <!-- 58. Text Input: run metadata for Append -->
+    <Node ToolID="58">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+        <Position x="1500" y="1370" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <NumRows value="1" />
+          <Fields>
+            <Field name="run_id" />
+            <Field name="run_dt" />
+            <Field name="pipeline_version" />
+          </Fields>
+          <Data>
+            <r><c>aldi-adv-001</c><c>2026-05-13</c><c>v2.0</c></r>
+          </Data>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Run Metadata</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+    </Node>
+
+    <!-- 59. Macro call: hypothetical customer-segmentation macro -->
+    <Node ToolID="59">
+      <GuiSettings Plugin="CustomerSegmentation.yxmc">
+        <Position x="780" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <MacroPath>./macros/CustomerSegmentation.yxmc</MacroPath>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Customer Segmentation Macro</Name></Annotation>
+      </Properties>
+    </Node>
+
+    <!-- 60. Output: customer-level CSV -->
+    <Node ToolID="60">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.DbFileOutput.DbFileOutput">
+        <Position x="900" y="650" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Passwords />
+          <File MaxRecords="" FileFormat="25">/Volumes/aldi_aus/demo/raw_test/output_customer_360.csv</File>
+          <FormatSpecificOptions>
+            <HeaderRow>True</HeaderRow>
+            <Delimeter>,</Delimeter>
+            <CodePage>65001</CodePage>
+          </FormatSpecificOptions>
+        </Configuration>
+        <Annotation DisplayMode="0"><Name>Write Customer 360</Name></Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxDbFileOutput" />
+    </Node>
+
+    <!-- 61. Comment: documentation -->
+    <Node ToolID="61">
+      <GuiSettings Plugin="AlteryxGuiToolkit.TextBox.TextBox">
+        <Position x="40" y="1820" width="2000" height="80" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Text>RetailAnalyticsAdvancedML — exercises full Alteryx Designer surface: Data prep (Auto Field, Data Cleansing, Record ID, Filter), Joins (Join x2, Find Replace, Append Fields), Parsing (DateTime, RegEx, Text-to-Columns), Multi-Row + Multi-Field Formulas, Imputation, Fuzzy Match + Make Group, Spatial (Create Points, Buffer, Find Nearest, Spatial Match), Aggregation (Summarize, Count Records, Running Total, Weighted Average, Tile, Cross Tab, Transpose), Sampling (Random %Sample, Oversample, Create Samples), Predictive (Linear Regression, Score), Time Series (TS Plot, ARIMA), Developer (Cache, Test, Message, Block Until Done), Macro reference, Containers, Comments, Generate Rows, Union, Unique, Sort, Sample, Select, Multiple CSV Outputs.</Text>
+          <Font name="Tahoma" size="9" style="0" />
+          <TextColor name="Black" />
+          <FillColor r="245" g="245" b="220" />
+          <Shape shape="0" />
+          <Justification value="Left" />
+        </Configuration>
+        <Annotation DisplayMode="0" />
+      </Properties>
+    </Node>
+
+  </Nodes>
+
+  <Connections>
+    <!-- Ingest -->
+    <Connection><Origin ToolID="1" Connection="Output" /><Destination ToolID="4" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="4" Connection="Output" /><Destination ToolID="5" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="5" Connection="Output" /><Destination ToolID="6" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="6" Connection="Output" /><Destination ToolID="7" Connection="Input" /></Connection>
+    <!-- Parse + enrich -->
+    <Connection><Origin ToolID="7" Connection="True" /><Destination ToolID="8" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="8" Connection="Output" /><Destination ToolID="9" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="9" Connection="Output" /><Destination ToolID="10" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="10" Connection="Output" /><Destination ToolID="11" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="11" Connection="Output" /><Destination ToolID="12" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="12" Connection="Output" /><Destination ToolID="13" Connection="Left" /></Connection>
+    <Connection><Origin ToolID="2" Connection="Output" /><Destination ToolID="13" Connection="Right" /></Connection>
+    <Connection><Origin ToolID="13" Connection="Join" /><Destination ToolID="14" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="57" Connection="Output" /><Destination ToolID="14" Connection="Lookup" /></Connection>
+    <Connection><Origin ToolID="14" Connection="Output" /><Destination ToolID="15" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="15" Connection="Output" /><Destination ToolID="16" Connection="Left" /></Connection>
+    <Connection><Origin ToolID="3" Connection="Output" /><Destination ToolID="16" Connection="Right" /></Connection>
+    <!-- Dedup -->
+    <Connection><Origin ToolID="16" Connection="Join" /><Destination ToolID="17" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="17" Connection="Unique" /><Destination ToolID="18" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="18" Connection="Match" /><Destination ToolID="19" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="19" Connection="Output" /><Destination ToolID="20" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="20" Connection="Output" /><Destination ToolID="21" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="21" Connection="Output" /><Destination ToolID="59" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="59" Connection="Output" /><Destination ToolID="60" Connection="Input" /></Connection>
+    <!-- Geo -->
+    <Connection><Origin ToolID="3" Connection="Output" /><Destination ToolID="22" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="22" Connection="Output" /><Destination ToolID="23" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="23" Connection="Output" /><Destination ToolID="24" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="23" Connection="Output" /><Destination ToolID="25" Connection="Target" /></Connection>
+    <Connection><Origin ToolID="24" Connection="Output" /><Destination ToolID="25" Connection="Universe" /></Connection>
+    <Connection><Origin ToolID="25" Connection="Output" /><Destination ToolID="26" Connection="Target" /></Connection>
+    <Connection><Origin ToolID="24" Connection="Output" /><Destination ToolID="26" Connection="Universe" /></Connection>
+    <!-- Aggregation -->
+    <Connection><Origin ToolID="21" Connection="Output" /><Destination ToolID="27" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="21" Connection="Output" /><Destination ToolID="28" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="28" Connection="Output" /><Destination ToolID="29" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="28" Connection="Output" /><Destination ToolID="30" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="28" Connection="Output" /><Destination ToolID="31" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="31" Connection="Output" /><Destination ToolID="32" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="32" Connection="Output" /><Destination ToolID="33" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="31" Connection="Output" /><Destination ToolID="46" Connection="Input" /></Connection>
+    <!-- ML -->
+    <Connection><Origin ToolID="28" Connection="Output" /><Destination ToolID="34" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="34" Connection="Output" /><Destination ToolID="35" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="35" Connection="Output" /><Destination ToolID="36" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="36" Connection="E" /><Destination ToolID="37" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="37" Connection="O" /><Destination ToolID="38" Connection="M" /></Connection>
+    <Connection><Origin ToolID="36" Connection="H" /><Destination ToolID="38" Connection="D" /></Connection>
+    <Connection><Origin ToolID="38" Connection="Output" /><Destination ToolID="39" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="39" Connection="Output" /><Destination ToolID="40" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="39" Connection="Output" /><Destination ToolID="55" Connection="Input" /></Connection>
+    <!-- TS forecast -->
+    <Connection><Origin ToolID="21" Connection="Output" /><Destination ToolID="41" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="42" Connection="Output" /><Destination ToolID="43" Connection="Left" /></Connection>
+    <Connection><Origin ToolID="41" Connection="Output" /><Destination ToolID="43" Connection="Right" /></Connection>
+    <Connection><Origin ToolID="43" Connection="Join" /><Destination ToolID="44" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="43" Connection="Join" /><Destination ToolID="45" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="45" Connection="Output" /><Destination ToolID="56" Connection="Input" /></Connection>
+    <!-- Output pipeline + flow control -->
+    <Connection><Origin ToolID="46" Connection="Output" /><Destination ToolID="47" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="47" Connection="Output" /><Destination ToolID="48" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="48" Connection="Output" /><Destination ToolID="49" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="49" Connection="Output" /><Destination ToolID="50" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="33" Connection="Output" /><Destination ToolID="50" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="50" Connection="Output" /><Destination ToolID="51" Connection="Targets" /></Connection>
+    <Connection><Origin ToolID="58" Connection="Output" /><Destination ToolID="51" Connection="Source" /></Connection>
+    <Connection><Origin ToolID="51" Connection="Output" /><Destination ToolID="52" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="52" Connection="Output" /><Destination ToolID="53" Connection="Input" /></Connection>
+    <Connection><Origin ToolID="53" Connection="Output" /><Destination ToolID="54" Connection="Input" /></Connection>
+  </Connections>
+
+  <Properties>
+    <Memory default="True" />
+    <GlobalRecordLimit value="0" />
+    <TempFiles default="True" />
+    <Annotation on="True" includeToolName="False" />
+    <ConvErrorLimit value="10" />
+    <ConvErrorLimit_Stop value="False" />
+    <CancelOnError value="False" />
+    <DisableBrowse value="False" />
+    <EnablePerformanceProfiling value="True" />
+    <DisableAllOutput value="False" />
+    <ShowAllMacroMessages value="False" />
+    <ShowConnectionStatusIsOn value="True" />
+    <ShowConnectionStatusOnlyWhenRunning value="True" />
+    <ZoomLevel value="35" />
+    <MetaInfo>
+      <NameIsFileName value="True" />
+      <Name>RetailAnalyticsAdvancedML</Name>
+      <Description>Extreme-complexity Alteryx workflow over 20M-row retail dataset: data prep, fuzzy matching, geospatial trade areas, linear regression scoring, ARIMA forecasting, plus full set of developer/flow-control/reporting tools for migration testing to Databricks Lakeflow SDP.</Description>
+      <Author>Aldi Sud Migration Demo</Author>
+      <Company>Databricks Field Engineering</Company>
+    </MetaInfo>
+  </Properties>
+</AlteryxDocument>
