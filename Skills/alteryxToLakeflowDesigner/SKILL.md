@@ -10,8 +10,223 @@ description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into D
 When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it into a fully functional Lakeflow Designer (Visual Data Prep) pipeline. The pipeline must:
 1. Reproduce the exact logic of the Alteryx workflow.
 2. Always materialize the final output to a Unity Catalog Delta table.
-3. Validate results against expected output when provided by the user.
+3. Validate results against expected output (see Step 10). If the user has not provided an expected output file, explicitly ask for one before finalizing the pipeline. Validation is required and must not be skipped.
 4. Cover the full Alteryx tool palette and all common file formats — flagging any tool/format that has no automatic VDP equivalent so the user can address it manually.
+
+---
+
+## CRITICAL RULE: Operator Selection Priority
+
+**Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
+
+### Priority 1: Visual Operators (ALWAYS try first)
+
+| Operator | Use For |
+|----------|---------|
+| **Transform** | Column derivations, CASE WHEN, CAST, COALESCE, TRIM, UPPER, SOUNDEX, REGEXP_EXTRACT, DATEDIFF, literal values, `*` passthrough |
+| **Filter** | Row filtering with boolean conditions |
+| **Aggregate** | GROUP BY with SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE |
+| **Join** | Combining tables on key columns |
+| **Sort** | ORDER BY |
+| **Limit** | TOP N rows |
+| **Pivot/Unpivot** | Reshape wide↔tall |
+| **Combine** | UNION, INTERSECT, EXCEPT |
+
+### Priority 2: AI Functions (ONLY when ALL 3 conditions are met)
+
+1. Output is **creative/generative text** (summaries, profiles, semantic classifications of free-text)
+2. Input table has **low cardinality** (thousands of rows, NOT millions)
+3. There is **no deterministic equivalent** (no CASE WHEN, lookup table, or regex can do it)
+
+✅ **Good AI use cases:** customer profile generation, free-text sentiment, text summarization, semantic classification
+❌ **Bad AI use cases (use Transform instead):** product name standardization (finite mappings), region→coord lookup, rule-based segment assignment, data type conversion
+
+#### AI Function Decision Flowchart:
+1. Is the mapping finite and known? → **Transform CASE WHEN** or **Join to lookup table**
+2. Does it need to be deterministic/reproducible? → **Transform** or **SQL**
+3. Is the table millions of rows? → **NOT AI** (cost/latency explosion)
+4. Is it genuinely creative/semantic with no deterministic equivalent? → **AI Function** ✅
+
+### Priority 3: SQL (ONLY for these specific patterns)
+
+- **Window functions**: ROW_NUMBER, RANK, DENSE_RANK, NTILE, LAG, LEAD, SUM/AVG/COUNT OVER(...)
+- **COUNT(DISTINCT col)** — Aggregate operator doesn't support it
+- **STDDEV, VARIANCE, PERCENTILE_APPROX** in aggregation context with COUNT DISTINCT in same query
+- **CTEs** — ONLY when required for SEQUENCE/EXPLODE or self-referencing subqueries
+- **SEQUENCE + EXPLODE** (calendar/date generation)
+- **Subqueries** (SELECT FROM (SELECT ...)) for inline DISTINCT before window
+
+### Priority 4: Python (ABSOLUTE LAST RESORT — only for)
+
+- **File I/O**: CSV/Parquet writes to Volumes (4 lines max)
+- **ML model training/scoring**: sklearn, pyspark.ml, statsmodels
+- **External libraries** with no SQL/visual equivalent (e.g., ARIMA, Prophet)
+
+#### Python must NEVER contain:
+- `F.withColumn("col", F.soundex(...))` → use **Transform**: `SOUNDEX(col) AS alias`
+- `F.withColumn("col", F.regexp_extract(...))` → use **Transform**: `REGEXP_EXTRACT(col, pattern, group) AS alias`
+- `F.withColumn("col", F.when(...).otherwise(...))` → use **Transform**: `CASE WHEN ... END AS alias`
+- `df.groupBy(...).agg(F.sum(), F.avg(), ...)` → use **Aggregate** operator
+- `F.datediff(...)`, `F.current_date()` → use **Transform**: `DATEDIFF(...)`, `CURRENT_DATE()`
+- `F.lit(value)` → use **Transform**: `5.0 AS col_name`
+- `F.col("x").cast("double")` → use **Transform**: `CAST(x AS DOUBLE)`
+
+---
+
+### One Logical Step = One Operator Rule
+
+Each distinct transformation purpose gets its own operator node. NEVER consolidate multiple unrelated steps into one SQL or Python operator.
+
+**Default approach (ALWAYS use this):**
+
+| Step | Operator | Purpose |
+|------|----------|---------|
+| 1 | **Transform** | Derive new columns (SOUNDEX, REGEXP_EXTRACT, CASE WHEN) |
+| 2 | **SQL** | Window function A (e.g., DENSE_RANK for group assignment) |
+| 3 | **SQL** (separate) | Window function B that depends on step 2's output (e.g., LAG partitioned by group_id) |
+| 4 | **Transform** | Simple derivation on window results (e.g., DATEDIFF on LAG output) |
+
+**❌ DO NOT consolidate into CTEs by default:**
+```sql
+-- WRONG: Merging unrelated purposes into one SQL
+WITH step1 AS (SELECT *, DENSE_RANK() ... FROM upstream),
+     step2 AS (SELECT *, LAG() ... FROM step1)
+SELECT *, DATEDIFF(...) FROM step2
+```
+
+**✅ CORRECT: Separate operators for separate purposes:**
+```
+Transform (derivations) → SQL (DENSE_RANK only) → SQL (LAG + NTILE) → Transform (DATEDIFF)
+```
+
+#### When to ASK the user about consolidation:
+
+If two adjacent SQL nodes both contain window functions, ASK the user:
+> "These window functions could be combined into one SQL node for compactness, or kept as separate nodes for clarity. Which do you prefer?"
+
+**Only consolidate if the user explicitly requests it.** Default is always MORE operators.
+
+---
+
+### Decomposition Rule
+
+When an Alteryx tool's logic contains BOTH simple expressions AND complex operations (window functions, dedup), **always split into multiple operators**:
+- **Transform** for: CASE WHEN, COALESCE, constants, regex, type casts, string functions, date functions, arithmetic, SOUNDEX
+- **SQL** for: window functions (SUM OVER, ROW_NUMBER, NTILE, LAG/LEAD), CTEs, subqueries
+- **AI Function** for: creative/generative text on low-cardinality results (profiles, summaries)
+
+---
+
+### What Transform CAN handle (do NOT use SQL or Python for these)
+
+| Category | Functions/Patterns | Example |
+|----------|-------------------|---------|
+| **Arithmetic** | +, -, *, /, ROUND, ABS, FLOOR, CEIL | `quantity * unit_price * (1 - discount_pct) AS net_amount` |
+| **Conditional** | CASE WHEN (up to ~10+ branches) | `CASE WHEN region = 'X' THEN val ... END AS col` |
+| **Null handling** | COALESCE, NVL, IFNULL | `COALESCE(unit_price, list_price) AS price_final` |
+| **String** | TRIM, UPPER, LOWER, INITCAP, CONCAT, SPLIT, SUBSTRING, LENGTH, REPLACE | `TRIM(INITCAP(name)) AS name` |
+| **Regex** | REGEXP_EXTRACT, REGEXP_REPLACE | `REGEXP_EXTRACT(email, '@(.+)$', 1) AS domain` |
+| **Phonetic** | SOUNDEX | `SOUNDEX(customer_name) AS name_soundex` |
+| **Date/Time** | TO_TIMESTAMP, TO_DATE, DATEDIFF, DATE_ADD, MONTHS_BETWEEN, YEAR, MONTH, DAYOFWEEK | `DATEDIFF(current_date(), last_date) AS days_ago` |
+| **Type casting** | CAST | `CAST(quantity AS DOUBLE)` |
+| **Literals/Constants** | Any fixed value | `5.0 AS trade_area_radius_km`, `'AUD' AS currency` |
+| **Passthrough** | `*` to keep all existing columns | First expr `"*"`, then add computed cols |
+| **Column selection** | List specific columns | `col1`, `col2`, `col3 AS renamed` |
+| **Find/Replace (small)** | CASE WHEN for ≤10 mappings | `CASE WHEN col = 'old' THEN 'new' ... END AS col` |
+
+### What REQUIRES SQL (cannot use Transform)
+
+| Pattern | Why |
+|---|---|
+| Window functions | `SUM() OVER (PARTITION BY ... ORDER BY ...)` |
+| Running totals | `SUM(col) OVER (... ROWS UNBOUNDED PRECEDING)` |
+| Deduplication | `ROW_NUMBER() OVER (PARTITION BY key ...) WHERE rn = 1` |
+| NTILE / ranking | `NTILE(10) OVER (ORDER BY ...)` |
+| COUNT DISTINCT in aggregation | `COUNT(DISTINCT col)` — Aggregate operator only supports COUNT (no DISTINCT) |
+| Subqueries / CTEs | Multi-step logic referencing intermediate results |
+| QUALIFY | Row-level filter on window results |
+| LAG / LEAD | `LAG(col) OVER (PARTITION BY ... ORDER BY ...)` |
+| SEQUENCE + EXPLODE | Calendar/date spine generation |
+
+### Aggregate Operator — Capabilities & Limitations
+
+**✅ Supported:** SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE
+
+**✅ Workarounds:**
+| Need | Workaround |
+|------|-----------|
+| FIRST(col) | Use MIN(col) — acceptable when group implies single logical value |
+| LAST(col) | Use MAX(col) — same caveat |
+
+**❌ Must use SQL:** COUNT(DISTINCT col), COLLECT_LIST/SET, FIRST_VALUE/LAST_VALUE, any window function
+
+### When to use Aggregate vs SQL for GROUP BY
+
+| Pattern | Use |
+|---|---|
+| GROUP BY + SUM/AVG/COUNT/MIN/MAX/MEDIAN/STDDEV | **Aggregate operator** — always preferred |
+| GROUP BY + COUNT DISTINCT | Must use **SQL** — Aggregate COUNT does not deduplicate |
+| GROUP BY + FIRST/LAST/COLLECT_LIST | Must use **SQL** — not supported by Aggregate |
+
+---
+
+### Decomposition Patterns — Common Alteryx Tools
+
+#### Fuzzy Match + Make Group
+| Step | Operator | Expression |
+|------|----------|-----------|
+| 1 | **Transform** | `SOUNDEX(name) AS soundex`, `REGEXP_EXTRACT(email, ...) AS domain` |
+| 2 | **SQL** | `DENSE_RANK() OVER (ORDER BY soundex, domain) AS group_id` |
+| 3 | **SQL** (separate — depends on group_id) | `LAG(txn_dt) OVER (PARTITION BY group_id ...) AS prev_dt` |
+| 4 | **Transform** | `DATEDIFF(txn_dt, prev_dt) AS days_since_prior` |
+
+#### Customer Segmentation Macro (RFM)
+| Step | Operator | Logic |
+|------|----------|-------|
+| 1 | **Aggregate** | GROUP BY customer with MAX, COUNT, SUM, AVG, MIN |
+| 2 | **Transform** | `DATEDIFF(current_date(), last_txn_date) AS recency_days` |
+| 3 | **SQL** | `NTILE(5) OVER (ORDER BY ...) AS r_score, f_score, m_score` |
+| 4 | **Transform** | `CASE WHEN r_score >= 4 AND f_score >= 4 THEN 'Champions' ...` |
+| 5 | **AI Function** (optional, low-cardinality) | `ai_gen(CONCAT('Profile: ', ...)) AS customer_profile` |
+
+#### Geospatial (Coordinate Assignment + Ranking)
+| Step | Operator | Logic |
+|------|----------|-------|
+| 1 | **Transform** | CASE WHEN region → lat/lon (≤10 branches) |
+| 2 | **SQL** | DISTINCT + `ROW_NUMBER() OVER (PARTITION BY region ORDER BY id)` |
+
+#### Summarize / GroupBy
+| Scenario | Operator |
+|----------|----------|
+| Standard aggs (SUM/AVG/COUNT/MIN/MAX) | **Aggregate** |
+| COUNT(DISTINCT col) | **SQL** |
+| STDDEV / PERCENTILE alone | **Aggregate** (supported) |
+| F.first() needed | **Aggregate** with MIN substitute |
+
+#### Find Replace / Standardize
+| Scenario | Operator |
+|----------|----------|
+| ≤10 known mappings | **Transform** CASE WHEN |
+| 10-100 mappings | **Join** to lookup/reference table |
+| Unknown variations (low cardinality, creative) | **AI Function** |
+| Unknown variations (high cardinality) | Run AI on DISTINCT values once → save to table → **Join** |
+
+---
+
+### Anti-Patterns — What NOT to Do
+
+| ❌ Anti-Pattern | ✅ Correct Approach |
+|----------------|-------------------|
+| Monolithic Python with groupBy + withColumn + CASE WHEN + CSV write | Decompose: Aggregate → Transform → SQL (windows) → Transform → Python (CSV only) |
+| ai_gen() on millions of rows for standardization | Transform CASE WHEN or Join to lookup table |
+| SQL for simple COALESCE/CAST/TRIM/SOUNDEX/DATEDIFF | Transform operator |
+| Python F.lit(5.0) for constants | Transform: `5.0 AS col_name` |
+| Python F.soundex() or F.regexp_extract() | Transform: SOUNDEX(), REGEXP_EXTRACT() |
+| Merging multiple unrelated windows into one SQL via CTEs without asking user | Separate SQL nodes: one per logical step; ASK before consolidating |
+| AI function when output must be deterministic | Transform CASE WHEN |
+| AI function on high-cardinality table (millions of rows) | Run on DISTINCT values once → save → Join |
+| Fewer nodes via consolidation without asking user | Always default to MORE operators; ask before merging |
+
 
 ---
 
@@ -97,6 +312,16 @@ Layout coordinates: x increases left → right (typical step ≈ 260px), y incre
 
 ### When to reach for `ai_function`
 
+**IMPORTANT: Always check Priority 1 (visual operators) and Priority 2 conditions first.**
+AI functions are appropriate ONLY when:
+1. The output is **creative/generative** (summaries, profiles, semantic classifications)
+2. The table has **low cardinality** (thousands of rows, NOT millions)
+3. There is **no deterministic equivalent** (CASE WHEN, lookup table, regex cannot do it)
+
+❌ **NEVER use AI for:** finite known mappings (product name standardization → CASE WHEN), coordinate lookups (→ CASE WHEN), rule-based assignments (RFM segments → CASE WHEN), any table with millions of rows.
+
+✅ **Good AI use:** generating natural-language customer profiles from RFM scores, sentiment analysis on free-text reviews, semantic similarity for fuzzy matching when SOUNDEX is insufficient.
+
 Several Alteryx tools have no traditional SQL equivalent but map naturally to a Databricks AI function. Prefer `ai_function` over a hand-rolled `python` + LLM call. The full set of functions exposed in the operator dropdown:
 
 | Function | Description | Alteryx pattern it replaces |
@@ -158,7 +383,8 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Data Cleansing (PII redaction) | `ai_function` | `ai_mask(text, ARRAY('EMAIL','PHONE','SSN',...))` |
 | Filter | `filter` | `config.condition` is a free-form SQL boolean string (the UI is a visual builder; the export is SQL). Alteryx T/F outputs become two parallel `filter` operators with inverse conditions — Designer's Filter has only one output port (`filtered_data`). |
 | Formula | `transform` | One row per output column with a SQL expression |
-| Imputation | `sql` | `COALESCE(col, AVG(col) OVER ())` etc. |
+| Imputation (simple null fill with constant/other col) | `transform` | `COALESCE(col, fallback_col) AS col` — use Transform when filling from another column or a constant. **Prefer Transform over SQL.** |
+| Imputation (fill with aggregate like median/mean) | `sql` | `COALESCE(col, AVG(col) OVER ())` — use SQL only when the fill value requires a window/aggregate calculation |
 | Multi-Field Formula | `transform` | Apply same expression to a list of columns |
 | Multi-Row Formula | `sql` | `LAG`/`LEAD` window functions |
 | Random % Sample | `sql` | `WHERE rand() < 0.1` (with seed if reproducibility needed) |
@@ -179,10 +405,12 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Append Fields (cross join) | `sql` | Designer Join has no cross-join — emit `SELECT * FROM left CROSS JOIN right`. |
 | Union | `combine` | `operator: UNION`, `quantifier: ALL` (= UNION ALL) or `DISTINCT` (= UNION DISTINCT) |
 | Set difference (Alteryx Join L-only output, in isolation) | `combine` | `operator: EXCEPT` (or `MINUS`). Designer's Combine also exposes `INTERSECT` — Alteryx has no native equivalent for either. |
-| Find Replace | `join` + `transform` | Left join to lookup table, COALESCE replacement, drop lookup cols |
+| Find Replace (small static mapping, 10 or fewer values) | `transform` | Use CASE WHEN: `CASE WHEN col = 'old1' THEN 'new1' ... ELSE col END AS col`. **Prefer Transform for small lookups.** |
+| Find Replace (large lookup table) | `join` + `transform` | Left join to lookup table, COALESCE replacement, drop lookup cols |
 | Make Group | `sql` | Connected-components — emit a stub + flag **REVIEW** (rare; ask user) |
-| Fuzzy Match (string-distance) | `python` | `levenshtein`/`soundex`/`jaro_winkler`; flag **REVIEW** for tuning |
-| Fuzzy Match (semantic) | `ai_function` | `ai_similarity(left_text, right_text)` then threshold |
+| Fuzzy Match (string-distance, SOUNDEX grouping) | `transform` + `sql` | **Transform**: `SOUNDEX(name) AS soundex`, `REGEXP_EXTRACT(email, ...) AS domain`. **SQL**: `DENSE_RANK() OVER (ORDER BY soundex, domain) AS group_id`. See Decomposition Patterns above. |
+| Fuzzy Match (Levenshtein/Jaro-Winkler with tuning) | `python` | `levenshtein`/`jaro_winkler` with custom thresholds; flag **REVIEW** |
+| Fuzzy Match (semantic similarity) | `ai_function` | `ai_similarity(left_text, right_text)` then threshold — only for truly semantic matching on low-cardinality data |
 
 ### 2.4 Parse
 
@@ -205,7 +433,8 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Count Records | `aggregate` | Single `COUNT(*)` aggregation, no group_bys |
 | Cross Tab | `pivot` | **Rows → Columns** mode; pick pivot column + value/aggregation |
 | Running Total | `sql` | `SUM(col) OVER (PARTITION BY ... ORDER BY ...)` |
-| Summarize (Sum/Avg/Count/Min/Max/Median/Stddev/Variance/Percentile) | `aggregate` | Map directly to the supported aggregations |
+| Summarize (Sum/Avg/Count/Min/Max/Median/Stddev/Variance/Percentile) | `aggregate` | **ALWAYS use Aggregate** — map directly to the supported aggregations. Only fall back to `sql` when: (a) COUNT DISTINCT is needed, (b) aggregation involves UNION ALL across granularities, or (c) uses unsupported functions (first/last/collect_list). |
+| Summarize with CountDistinct | `sql` | The Aggregate operator COUNT does NOT deduplicate — use `COUNT(DISTINCT col)` in SQL. This is the ONE case where SQL is required for aggregation. |
 | Summarize (First / Last / Concat) | `sql` | Designer's Aggregate does NOT expose first/last/collect_list — use `FIRST_VALUE`, `LAST_VALUE`, or `concat_ws(',', collect_list(col))` |
 | Transpose | `pivot` | **Columns → Rows** mode |
 | Weighted Average | `sql` | `SUM(value*weight) / SUM(weight)` per group |
@@ -293,7 +522,7 @@ Reporting tools render PDFs / emails / dashboards. VDP doesn't render — output
 | Detour | **MANUAL** | Static branching by parameter; convert to two pipelines or `if` in `python` |
 | Block Until Done | *omit* | Spark DAG already enforces ordering |
 | Message | `markdown` | Static informational text |
-| Test | `sql` | `SELECT CASE WHEN <invariant> THEN 'PASS' ELSE 'FAIL'`; or DLT expectations |
+| Test | `sql` | `SELECT CASE WHEN <invariant> THEN 'PASS' ELSE 'FAIL'`; or pipeline expectations |
 | Python Tool | `python` | Direct port; rewrite `Alteryx.read()` → `inputs["data"][i]` |
 | R Tool | `python` | Re-implement in PySpark; flag **REVIEW** |
 
@@ -337,7 +566,7 @@ See Step 11 for full handling.
 | **Stat packages** | SAS `.sas7bdat` | `python` | `spark-sas7bdat` connector or `pandas`+`pyreadstat` for small files |
 | | SPSS `.sav` | `python` | `pandas`+`pyreadstat` |
 | | R `.rds` | `python` | `pyreadr.read_r` |
-| **Alteryx native** | `.yxdb` | **MANUAL** | Proprietary binary; user must export from Alteryx to CSV/Parquet first |
+| **Alteryx native** | `.yxdb` | **MANUAL** | Proprietary binary. The Python `yxdb` library fails on newer "e2 Database" format files. Workarounds: (a) ask user to export from Alteryx to CSV/Parquet, (b) if an expected output file exists, extract historical `.yxdb` data from it via column alignment, (c) use the original `.xlsx`/`.csv` source if the `.yxdb` was just an intermediate cache. Always save extracted data as CSV to a UC Volume. |
 | | `.yxmd` | n/a | The workflow itself — input to this skill |
 | | `.yxmc` | see Step 11 | Macro definition |
 | | `.yxi` | **MANUAL** | Packaged tool; not data |
@@ -681,52 +910,116 @@ For external DB writes, use a `python` operator with `df.write.format("jdbc")` o
 
 ---
 
-## Step 10: Data Validation (When Expected Output Provided)
+## Step 10: Data Validation (REQUIRED)
 
-When the user provides an expected output file (CSV, Excel, table):
+### 10a. Ask for the expected output file
 
-### 10a. Add a validation source
+**This step is mandatory.** Before finalizing the pipeline, you MUST have an expected output file to validate against.
 
-Read the expected output as a separate `source`/`python` node.
+- If the user provided an expected output file (CSV, Excel, Parquet, or table) alongside the `.yxmd`, proceed to 10b.
+- If the user has not provided one, stop and explicitly ask:
 
-### 10b. Add a validation comparison node
+> "To validate the converted pipeline produces correct results, I need an expected output file — typically the CSV/Excel that the Alteryx workflow originally produced. Could you provide that file? (Upload it or place it in a UC Volume path.)"
+
+Do not skip validation or assume the pipeline is correct without comparing against known-good output.
+
+### 10b. Upload expected output to a UC Volume
+
+Save the expected output file to the same UC Volume area as the source data, for example:
+
+`/Volumes/<catalog>/<schema>/raw/<expected_output_filename>`
+
+### 10c. Add a validation source node
+
+Read the expected output as a separate `source` or `python` node (depending on format). Place it below the main pipeline flow at the same x-level as the final output.
+
+### 10d. Run structural validation (row counts by granularity)
+
+Add a `sql` validation node that compares row counts by key dimensions:
 
 ```yaml
-- id: validation
+- id: validation_row_counts
   template: sql
-  name: validation
+  name: validation_row_counts
   config:
     query: |
-      SELECT 'actual'   AS source,
-             COUNT(*)                    AS row_count,
-             COUNT(DISTINCT key_column)  AS unique_keys,
-             ROUND(AVG(metric_column),4) AS avg_metric
+      SELECT 'actual' AS source, <granularity_column>, COUNT(*) AS row_count
       FROM actual_output
+      GROUP BY <granularity_column>
       UNION ALL
-      SELECT 'expected' AS source,
-             COUNT(*),
-             COUNT(DISTINCT key_column),
-             ROUND(AVG(metric_column),4)
+      SELECT 'expected' AS source, <granularity_column>, COUNT(*) AS row_count
       FROM expected_data
+      GROUP BY <granularity_column>
+      ORDER BY <granularity_column>, source
   input:
-    - node: actual_output_node
+    - node: <actual_output_node>
       input_port: data
       output_port: <port>
-    - node: expected_source_node
+    - node: <expected_source_node>
       input_port: data
       output_port: <port>
 ```
 
-### 10c. Compare and report
+**What to check:**
+- Total row count: should match exactly or within a small margin (< 3%) if source data was regenerated
+- Row count by each granularity/dimension: identify which specific categories differ
+- If counts differ, investigate whether the source data has changed (common with dummy/test data)
 
-- Row counts should match.
-- Key column distinct counts should match.
-- Numeric averages should be within tolerance.
-- For row-level diff, use `EXCEPT`/`MINUS` both ways.
+### 10e. Run numeric validation (value comparison)
 
-### 10d. Clean up after validation
+Add a second `sql` node comparing key numeric columns for a known subset:
 
-Once the pipeline is confirmed correct, remove the validation source and comparison nodes.
+```yaml
+- id: validation_values
+  template: sql
+  name: validation_values
+  config:
+    query: |
+      SELECT a.<key_cols>,
+             a.<metric> AS actual_value,
+             e.<metric> AS expected_value,
+             ABS(a.<metric> - e.<metric>) AS abs_diff,
+             CASE WHEN e.<metric> != 0
+                  THEN ABS(a.<metric> - e.<metric>) / ABS(e.<metric>) * 100
+                  ELSE NULL END AS pct_diff
+      FROM actual_output a
+      JOIN expected_data e ON a.<key1> = e.<key1> AND a.<key2> = e.<key2>
+      WHERE ABS(a.<metric> - e.<metric>) > 0.0001
+      ORDER BY pct_diff DESC
+      LIMIT 20
+  input:
+    - node: <actual_output_node>
+      input_port: data
+      output_port: <port>
+    - node: <expected_source_node>
+      input_port: data
+      output_port: <port>
+```
+
+### 10f. Numeric precision tolerance
+
+Alteryx uses `FixedDecimal` types (typically 19.6 — 19 digits, 6 decimal places). Spark uses IEEE 754 double-precision. Expected differences:
+- **< 0.1% difference**: Normal — Alteryx intermediate rounding vs Spark continuous precision
+- **0.1% – 2%**: Likely due to regenerated dummy/test data (different random seed) — verify structural match instead
+- **> 2%**: Logic error — investigate the specific aggregation path
+
+**Structural match criteria (when values differ due to data regeneration):**
+- Same number of time periods processed
+- Same granularity types/labels present
+- Same column names and types
+- Row counts per granularity follow the same pattern (e.g. Period=8, Region=8×regions)
+
+### 10g. Report validation results
+
+Present results to the user in a concise summary covering:
+- Structural match status by major granularity
+- Total actual vs expected row counts
+- Largest numeric percent difference
+- Whether differences are explained by data regeneration or indicate a logic issue
+
+### 10h. Clean up after validation
+
+Once the pipeline is confirmed correct, remove the validation source and comparison nodes. They are temporary debugging tools, not part of the production pipeline.
 
 ---
 
@@ -788,6 +1081,7 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 
 ---
 
+
 ## Step 14: Known Limitations & Workarounds
 
 | Issue | Symptom | Workaround |
@@ -796,7 +1090,10 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 | Config stripping | Python/SQL configs reset to `{}` or `expressions: []` | Never change template type; recreate operator instead |
 | `TRY_CAST` in `transform` | Edits silently revert to `CAST` | Use a `filter` upstream, or use `sql` instead |
 | SQL view names with spaces | `TABLE_OR_VIEW_NOT_FOUND` | Rename operators to simple snake_case names |
-| `.yxdb` files | Alteryx proprietary binary | Ask user to export to CSV/Parquet first |
+| `.yxdb` files | Alteryx proprietary binary; `yxdb` Python lib fails on "e2 Database" format | Ask user to export to CSV/Parquet first; or extract subset from expected output file |
+| Alteryx FixedDecimal precision | Numeric values differ ~0.04-1.7% vs expected output | Accept tolerance; verify structure (row counts, granularity types) rather than exact numeric match |
+| Excel source with NaN/blank cells | NULL columns for future periods in CYTD reports | Correctly handled — stable assortment filters exclude NULLs; no action needed |
+| Fan-out to 10+ Summarize/Join pairs | Verbose DAG; many intermediate Alteryx nodes | Consolidate into one `sql` per logical branch (e.g. Retail, Cost) using UNION ALL across granularities; remove downstream sort/rename transforms; see §15b and §15f |
 | Complex Python code | Code field gets stripped | Keep code simple; split logic across multiple `python` operators |
 | Iterative macros | No native loop | Lakeflow Job `For Each` task |
 | Reporting/Render tools | No equivalent | Output Delta + Lakeview (AI/BI) dashboard |
@@ -812,6 +1109,93 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 
 ---
 
+## Step 15: Common Alteryx Patterns & VDP Equivalents
+
+### 15a. Fisher Index / Laspeyres-Paasche calculation
+
+A common economic/inflation calculation:
+1. Split into Retail/Cost branches
+2. Compute Average Item Price = Value / Quantity
+3. Cross-products: `Price_CY × Qty_PY` and `Price_PY × Qty_CY`
+4. Laspeyres = SUM(Price_CY × Qty_PY) / SUM(Value_PY)
+5. Paasche = SUM(Value_CY) / SUM(Price_PY × Qty_CY)
+6. Fisher = SQRT(Laspeyres × Paasche)
+
+**Critical**: Non-Region granularities aggregate at the article level first (summing across regions), then apply stable assortment filters, then compute prices. Region granularity keeps raw per-region data. This produces mathematically different results — always trace the Summarize tool's GROUP BY fields.
+
+**Optimization**: The Fisher calculation should be a single `sql` operator that consumes the consolidated aggregation output (all granularities already unioned). Do not duplicate the Fisher formula per granularity — compute it once with a GROUP BY on `Granularity, Granularity_Value`.
+
+### 15b. Fan-out aggregation (one source → many granularities)
+
+**When to use `aggregate` vs `sql` for Alteryx Summarize:**
+- **Use `aggregate`** for any standalone Summarize that does a single GROUP BY with supported aggregation functions (SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE). The visual `aggregate` operator is easier for users to read, modify, and maintain — prefer it over `sql` for simple aggregations.
+- **Use `sql`** only when the aggregation pattern is too complex for a single `aggregate` — e.g. multiple different GROUP BY clauses UNIONed together, literal string columns added per segment, NULL casts for columns that vary per granularity, or unsupported functions like FIRST_VALUE / LAST_VALUE / collect_list.
+
+When one intermediate feeds 5+ parallel Summarize chains (common in inflation/index pipelines with Period, YTD, Region, etc.):
+- Do NOT replicate each separate Summarize+Join — consolidate into **one `sql` operator per branch** (e.g. one for Retail, one for Cost) that computes ALL granularities via UNION ALL inside a single query
+- Each UNION ALL segment performs its own GROUP BY and derives ratios in-line
+- This replaces N×2 cells (N aggregates + N joins/transforms) with just 2 SQL cells
+- Downstream Fisher/index logic then consumes the consolidated output directly
+
+Pattern (one SQL cell replacing 5 separate aggregate+transform chains):
+
+```sql
+-- Retail branch: all granularities in one query
+SELECT 'Period' AS Granularity, CAST(Period AS STRING) AS Granularity_Value,
+       SUM(Retail_Value) AS Retail_Value, SUM(Retail_Quantity) AS Retail_Quantity
+FROM source GROUP BY Period
+UNION ALL
+SELECT 'YTD' AS Granularity, CONCAT('YTD_', CAST(Period AS STRING)) AS Granularity_Value,
+       SUM(Retail_Value) AS Retail_Value, SUM(Retail_Quantity) AS Retail_Quantity
+FROM source GROUP BY <ytd_grouping>
+UNION ALL
+SELECT 'Region' AS Granularity, Region AS Granularity_Value,
+       SUM(Retail_Value) AS Retail_Value, SUM(Retail_Quantity) AS Retail_Quantity
+FROM source GROUP BY Region, Period
+-- etc. for all granularity levels
+```
+
+**Typical reduction**: 38 → 25 cells (or more) by eliminating per-granularity transform, rename, and sort operators that become unnecessary once SQL handles formatting directly.
+
+### 15c. Historical data union
+
+Many workflows union computed results with historical `.yxdb` data:
+- Add a second `source` for the historical CSV (extracted from expected output or exported from Alteryx)
+- Align column names/types with a `transform` — ensure BOTH branches produce identical column names and order
+- Use `combine` (UNION ALL) to merge
+- **Critical after optimization**: when consolidating aggregation cells, ensure the dynamic branch's SELECT list exactly matches the historical source's columns. Common mismatches: `Granularity_Value` vs `Granularity Value`, extra/missing metric columns. Use a `select_columns` transform on the historical branch or adjust the SQL's aliases to align.
+
+### 15d. Cleanse macro interpretation
+
+The `Cleanse.yxmc` checkboxes:
+- `Check Box (84) = True` → TRIM whitespace
+- `Check Box (117) = True` → Remove duplicate whitespace
+- `Drop Down (81) = "upper"` → Verify against actual output — may apply to column names only, not values
+
+### 15e. Select tool with renames
+
+`AlteryxSelect` does three things simultaneously:
+1. Drops columns (`selected="False"`)
+2. Renames columns (`rename="NewName"`)
+3. Changes types (`type="Double"`)
+
+Map to a single `transform` with explicit column list. `*Unknown selected="True"` means unlisted columns pass through.
+
+### 15f. Post-conversion DAG optimization
+
+After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to reduce DAG complexity:
+
+1. **Eliminate redundant `transform` (Select/Rename) cells**: If a downstream `sql` operator can produce correctly named columns directly in its SELECT list, remove the intermediate rename transform.
+2. **Eliminate redundant `sort` cells**: Sort is only needed immediately before the `output` operator or for windowed operations. Sorts inserted to mirror Alteryx's Sort tools between aggregations are unnecessary — remove them.
+3. **Consolidate parallel branches with UNION ALL in SQL**: When multiple parallel paths produce identically-structured rows (same columns, just different groupings), merge them into one `sql` cell using UNION ALL segments rather than separate aggregate → transform → combine chains.
+4. **Absorb type formatting into SQL**: Rather than a post-aggregation `transform` for ROUND/CAST, include formatting directly in the SQL's SELECT list.
+5. **Verify column consistency**: After removing intermediate transforms, confirm the final output columns still match (name, order, type) for any downstream `combine` or `output` operator.
+6. **Prefer visual `aggregate` over `sql` for simple GROUP BY**: If a `sql` operator only does `SELECT <group_cols>, SUM/AVG/COUNT/MIN/MAX(<cols>) FROM ... GROUP BY ...` with no UNION ALL, window functions, or complex expressions, convert it to a visual `aggregate` operator. This makes the pipeline more accessible to non-SQL users and aligns with Designer's visual-first philosophy.
+
+**Rule of thumb**: A well-optimized VDP pipeline should have ~60-65% of the cell count of a faithful 1:1 conversion.
+
+---
+
 ## Conversion Checklist
 
 - [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
@@ -821,6 +1205,11 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 - [ ] All column names are Delta-compatible (no spaces, no special chars)
 - [ ] Type casts handle dirty data (filter or `TRY_CAST`)
 - [ ] SQL operators reference simple display names (no spaces)
+- [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`) — reserve `sql` for multi-granularity UNION ALL or unsupported functions
+- [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
+- [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
+- [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
+- [ ] User was asked before consolidating multiple SQL window nodes into one
 - [ ] Deduplication uses `ROW_NUMBER()` pattern
 - [ ] Joins preserve L / J / R branches required downstream
 - [ ] Macros — standard inlined or extracted; iterative flagged for Job
@@ -829,7 +1218,14 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 - [ ] Output operator configured with `catalog.schema.table_name`
 - [ ] Optional non-Delta sinks added downstream of the Delta output (Step 9b)
 - [ ] Output node previews with no errors
-- [ ] Data validation performed (if expected output provided) and validation nodes removed afterwards
+- [ ] Expected output file obtained from user (asked explicitly if not provided)
+- [ ] Structural validation passed (row counts by granularity match or differences explained)
+- [ ] Numeric validation passed (values within 0.1% tolerance, or data regeneration documented)
+- [ ] Article-level pre-aggregation verified (if applicable — non-Region branches aggregate before price calculation)
+- [ ] Historical data source included (if workflow unions computed results with prior-period `.yxdb` data)
+- [ ] Data validation performed and validation nodes removed afterwards
+- [ ] Post-conversion optimization performed (redundant sorts/renames removed, fan-out consolidated — §15f)
+- [ ] Column schemas verified consistent across UNION branches after optimization
 - [ ] Pipeline tested end-to-end
 - [ ] Layout is clean and readable (horizontal flow, no overlaps)
 - [ ] Top-level `markdown` documents pipeline purpose and any MANUAL items
