@@ -1,0 +1,81 @@
+productCode,description,cgComplete,team,milestone_date,status
+100087,Wine item 100087,03 - Wine,VCO,2026-03-11,launched
+100062,Sparkling wine item 100062,02 - Sparkling wine,SST,2027-02-04,blocked
+100052,Bakery item 100052,01 - Bakery,SST,2026-04-23,in flight
+100138,Meat item 100138,09 - Meat,SST,2026-02-09,launched
+100013,Beverage item 100013,11 - Beverage,VCO,2026-08-29,blocked
+100170,Produce item 100170,06 - Produce,VCO,2027-02-18,launched
+100063,Confectionery item 100063,10 - Confectionery,VCO,2026-10-11,launched
+100175,Beverage item 100175,11 - Beverage,SST,2026-08-31,scoping
+100178,Sparkling wine item 100178,02 - Sparkling wine,SST,2026-08-19,in flight
+100184,Sparkling wine item 100184,02 - Sparkling wine,SST,2027-02-28,blocked
+100056,Meat item 100056,09 - Meat,VCO,2027-03-04,launched
+100155,Wine item 100155,03 - Wine,VCO,2026-12-25,launched
+100097,Seafood item 100097,12 - Seafood,SST,2027-01-02,blocked
+100133,Frozen item 100133,08 - Frozen,VCO,2027-02-14,in flight
+100082,Beer item 100082,04 - Beer,SST,2026-10-05,scoping
+100046,Meat item 100046,09 - Meat,VCO,2026-12-23,scoping
+100113,Dairy item 100113,05 - Dairy,SST,2026-06-16,blocked
+100161,Beverage item 100161,11 - Beverage,SST,2026-06-13,in flight
+100001,Seafood item 100001,12 - Seafood,SST,2026-02-09,scoping
+100016,Sparkling wine item 100016,02 - Sparkling wine,SST,2026-12-29,blocked
+100125,Bakery item 100125,01 - Bakery,VCO,2027-01-30,scoping
+100017,Sparkling wine item 100017,02 - Sparkling wine,SST,2027-04-27,blocked
+100049,Wine item 100049,03 - Wine,SST,2027-04-03,blocked
+100195,Meat item 100195,09 - Meat,VCO,2027-01-23,launched
+100162,Seafood item 100162,12 - Seafood,VCO,2026-11-30,launched
+100036,Wine item 100036,03 - Wine,VCO,2027-02-23,scoping
+100197,Meat item 100197,09 - Meat,SST,2026-12-25,launched
+100032,Seafood item 100032,12 - Seafood,SST,2026-06-20,in flight
+100023,Bakery item 100023,01 - Bakery,VCO,2027-01-26,launched
+100044,Dairy item 100044,05 - Dairy,SST,2026-04-30,blocked
+100151,Bakery item 100151,01 - Bakery,SST,2026-03-24,scoping
+100140,Snacks item 100140,07 - Snacks,VCO,2026-10-29,blocked
+100173,Frozen item 100173,08 - Frozen,VCO,2027-02-13,blocked
+100060,Beverage item 100060,11 - Beverage,SST,2026-05-04,launched
+100129,Bakery item 100129,01 - Bakery,SST,2027-01-29,in flight
+100020,Wine item 100020,03 - Wine,SST,2026-10-10,in flight
+100109,Produce item 100109,06 - Produce,SST,2026-09-21,in flight
+100119,Dairy item 100119,05 - Dairy,SST,2026-05-16,scoping
+100079,Seafood item 100079,12 - Seafood,SST,2027-03-24,in flight
+100042,Confectionery item 100042,10 - Confectionery,VCO,2027-04-25,blocked
+100050,Dairy item 100050,05 - Dairy,VCO,2026-12-20,scoping
+100198,Meat item 100198,09 - Meat,SST,2026-03-15,launched
+100108,Produce item 100108,06 - Produce,SST,2026-08-15,scoping
+100045,Sparkling wine item 100045,02 - Sparkling wine,VCO,2026-03-07,launched
+100188,Produce item 100188,06 - Produce,SST,2026-11-29,in flight
+100193,Beverage item 100193,11 - Beverage,VCO,2026-10-09,scoping
+100077,Wine item 100077,03 - Wine,SST,2026-03-06,launched
+100073,Beer item 100073,04 - Beer,SST,2027-01-09,scoping
+100147,Bakery item 100147,01 - Bakery,SST,2026-05-22,scoping
+100114,Sparkling wine item 100114,02 - Sparkling wine,VCO,2026-12-08,launched
+100051,Frozen item 100051,08 - Frozen,VCO,2026-10-03,launched
+100069,Confectionery item 100069,10 - Confectionery,VCO,2026-07-25,launched
+100123,Seafood item 100123,12 - Seafood,VCO,2026-07-14,in flight
+100164,Beverage item 100164,11 - Beverage,VCO,2027-01-09,blocked
+100092,Beverage item 100092,11 - Beverage,VCO,2026-12-12,scoping
+100101,Frozen item 100101,08 - Frozen,VCO,2027-04-26,launched
+100096,Seafood item 100096,12 - Seafood,SST,2026-02-04,blocked
+100160,Snacks item 100160,07 - Snacks,VCO,2027-02-09,in flight
+100120,Seafood item 100120,12 - Seafood,SST,2026-12-08,scoping
+100112,Beer item 100112,04 - Beer,VCO,2027-01-27,in flight
+100157,Dairy item 100157,05 - Dairy,VCO,2026-09-22,blocked
+100165,Seafood item 100165,12 - Seafood,VCO,2027-01-07,in flight
+100110,Produce item 100110,06 - Produce,SST,2026-12-26,launched
+100039,Confectionery item 100039,10 - Confectionery,SST,2026-12-24,launched
+100169,Produce item 100169,06 - Produce,SST,2027-03-23,launched
+100005,Snacks item 100005,07 - Snacks,VCO,2026-06-02,blocked
+100187,Beverage item 100187,11 - Beverage,VCO,2027-02-16,scoping
+100163,Beer item 100163,04 - Beer,VCO,2026-09-10,blocked
+100021,Beer item 100021,04 - Beer,SST,2027-02-13,blocked
+100076,Wine item 100076,03 - Wine,VCO,2026-12-10,in flight
+100136,Wine item 100136,03 - Wine,SST,2027-04-24,scoping
+100194,Sparkling wine item 100194,02 - Sparkling wine,SST,2026-10-15,scoping
+100065,Seafood item 100065,12 - Seafood,VCO,2027-04-05,blocked
+100048,Beverage item 100048,11 - Beverage,SST,2026-09-19,scoping
+100059,Beer item 100059,04 - Beer,VCO,2027-01-08,in flight
+100196,Seafood item 100196,12 - Seafood,SST,2026-05-22,in flight
+100058,Dairy item 100058,05 - Dairy,SST,2026-03-29,blocked
+100174,Frozen item 100174,08 - Frozen,SST,2026-04-26,launched
+100126,Sparkling wine item 100126,02 - Sparkling wine,VCO,2027-03-02,launched
+100071,Frozen item 100071,08 - Frozen,SST,2027-02-06,launched

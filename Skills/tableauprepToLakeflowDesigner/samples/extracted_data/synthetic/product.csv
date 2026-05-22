@@ -1,0 +1,201 @@
+productCode,mainCode,description,CGNo,retail,cgDesc,cgComplete,SCGNo,scgDesc,scgComplete,productClass,buyingDirector,groupBuyingDirector,packsize
+100000,100000,Beverage item 100000,11,37.33,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Derek Lin,Carolyn Patel,8
+100001,100001,Seafood item 100001,12,29.92,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Anita Gomez,Brett Cho,6
+100002,100002,Beer item 100002,4,30.49,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Derek Lin,Iris Tanaka,24
+100003,100003,Snacks item 100003,7,29.86,Snacks,07 - Snacks,2,Snacks subgroup 2,02 - Snacks subgroup 2,non_seasonal,Carolyn Patel,Grace Wu,6
+100004,100004,Produce item 100004,6,11.54,Produce,06 - Produce,3,Produce subgroup 3,03 - Produce subgroup 3,Seasonal,Brett Cho,Brett Cho,12
+100005,100005,Snacks item 100005,7,42.52,Snacks,07 - Snacks,1,Snacks subgroup 1,01 - Snacks subgroup 1,non_seasonal,Emily Faraday,Anita Gomez,24
+100006,100006,Seafood item 100006,12,48.67,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Brett Cho,Iris Tanaka,18
+100007,100007,Dairy item 100007,5,29.28,Dairy,05 - Dairy,5,Dairy subgroup 5,05 - Dairy subgroup 5,non_seasonal,Brett Cho,Anita Gomez,36
+100008,100008,Beverage item 100008,11,49.27,Beverage,11 - Beverage,2,Beverage subgroup 2,02 - Beverage subgroup 2,non_seasonal,Brett Cho,Grace Wu,8
+100009,100009,Dairy item 100009,5,8.96,Dairy,05 - Dairy,4,Dairy subgroup 4,04 - Dairy subgroup 4,non_seasonal,Derek Lin,Emily Faraday,12
+100010,100010,Seafood item 100010,12,27.16,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Carolyn Patel,Hassan Mehta,8
+100011,100011,Snacks item 100011,7,34.54,Snacks,07 - Snacks,3,Snacks subgroup 3,03 - Snacks subgroup 3,non_seasonal,Derek Lin,Anita Gomez,6
+100012,100012,Produce item 100012,6,4.23,Produce,06 - Produce,4,Produce subgroup 4,04 - Produce subgroup 4,Seasonal,Felipe Ortega,Derek Lin,24
+100013,100013,Beverage item 100013,11,44.34,Beverage,11 - Beverage,4,Beverage subgroup 4,04 - Beverage subgroup 4,non_seasonal,Hassan Mehta,Carolyn Patel,36
+100014,100014,Dairy item 100014,5,37.49,Dairy,05 - Dairy,2,Dairy subgroup 2,02 - Dairy subgroup 2,non_seasonal,Emily Faraday,Jamal Reed,24
+100015,100015,Snacks item 100015,7,18.73,Snacks,07 - Snacks,5,Snacks subgroup 5,05 - Snacks subgroup 5,non_seasonal,Iris Tanaka,Hassan Mehta,8
+100016,100016,Sparkling wine item 100016,2,8.48,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Grace Wu,Jamal Reed,8
+100017,100017,Sparkling wine item 100017,2,30.19,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Iris Tanaka,Emily Faraday,18
+100018,100018,Meat item 100018,9,34.39,Meat,09 - Meat,1,Meat subgroup 1,01 - Meat subgroup 1,non_seasonal,Emily Faraday,Felipe Ortega,24
+100019,100019,Sparkling wine item 100019,2,8.74,Sparkling wine,02 - Sparkling wine,3,Sparkling wine subgroup 3,03 - Sparkling wine subgroup 3,non_seasonal,Emily Faraday,Iris Tanaka,6
+100020,100020,Wine item 100020,3,43.65,Wine,03 - Wine,5,Wine subgroup 5,05 - Wine subgroup 5,non_seasonal,Iris Tanaka,Jamal Reed,12
+100021,100021,Beer item 100021,4,38.35,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Iris Tanaka,Anita Gomez,24
+100022,100022,Confectionery item 100022,10,1.94,Confectionery,10 - Confectionery,3,Confectionery subgroup 3,03 - Confectionery subgroup 3,non_seasonal,Emily Faraday,Derek Lin,12
+100023,100023,Bakery item 100023,1,5.19,Bakery,01 - Bakery,2,Bakery subgroup 2,02 - Bakery subgroup 2,non_seasonal,Brett Cho,Iris Tanaka,18
+100024,100024,Wine item 100024,3,24.28,Wine,03 - Wine,2,Wine subgroup 2,02 - Wine subgroup 2,non_seasonal,Carolyn Patel,Emily Faraday,24
+100025,100025,Meat item 100025,9,48.24,Meat,09 - Meat,5,Meat subgroup 5,05 - Meat subgroup 5,non_seasonal,Derek Lin,Emily Faraday,24
+100026,100026,Snacks item 100026,7,45.07,Snacks,07 - Snacks,3,Snacks subgroup 3,03 - Snacks subgroup 3,non_seasonal,Brett Cho,Derek Lin,18
+100027,100027,Beer item 100027,4,2.02,Beer,04 - Beer,1,Beer subgroup 1,01 - Beer subgroup 1,non_seasonal,Derek Lin,Jamal Reed,24
+100028,100028,Beer item 100028,4,35.67,Beer,04 - Beer,1,Beer subgroup 1,01 - Beer subgroup 1,non_seasonal,Derek Lin,Brett Cho,6
+100029,100029,Bakery item 100029,1,26.18,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Hassan Mehta,Derek Lin,12
+100030,100030,Meat item 100030,9,12.9,Meat,09 - Meat,2,Meat subgroup 2,02 - Meat subgroup 2,non_seasonal,Grace Wu,Derek Lin,18
+100031,100031,Sparkling wine item 100031,2,22.11,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Grace Wu,Hassan Mehta,18
+100032,100032,Seafood item 100032,12,3.96,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Felipe Ortega,Brett Cho,36
+100033,100033,Beer item 100033,4,27.27,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Grace Wu,Carolyn Patel,8
+100034,100034,Dairy item 100034,5,43.84,Dairy,05 - Dairy,4,Dairy subgroup 4,04 - Dairy subgroup 4,non_seasonal,Hassan Mehta,Iris Tanaka,6
+100035,100035,Sparkling wine item 100035,2,49.95,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Brett Cho,Derek Lin,6
+100036,100036,Wine item 100036,3,24.58,Wine,03 - Wine,4,Wine subgroup 4,04 - Wine subgroup 4,non_seasonal,Anita Gomez,Carolyn Patel,18
+100037,100037,Snacks item 100037,7,13.98,Snacks,07 - Snacks,1,Snacks subgroup 1,01 - Snacks subgroup 1,non_seasonal,Emily Faraday,Grace Wu,18
+100038,100038,Seafood item 100038,12,8.58,Seafood,12 - Seafood,5,Seafood subgroup 5,05 - Seafood subgroup 5,non_seasonal,Derek Lin,Anita Gomez,12
+100039,100039,Confectionery item 100039,10,37.64,Confectionery,10 - Confectionery,5,Confectionery subgroup 5,05 - Confectionery subgroup 5,non_seasonal,Anita Gomez,Jamal Reed,6
+100040,100040,Frozen item 100040,8,8.7,Frozen,08 - Frozen,5,Frozen subgroup 5,05 - Frozen subgroup 5,non_seasonal,Brett Cho,Carolyn Patel,24
+100041,100041,Sparkling wine item 100041,2,34.08,Sparkling wine,02 - Sparkling wine,5,Sparkling wine subgroup 5,05 - Sparkling wine subgroup 5,non_seasonal,Grace Wu,Brett Cho,8
+100042,100042,Confectionery item 100042,10,31.34,Confectionery,10 - Confectionery,2,Confectionery subgroup 2,02 - Confectionery subgroup 2,non_seasonal,Jamal Reed,Jamal Reed,18
+100043,100043,Meat item 100043,9,11.0,Meat,09 - Meat,3,Meat subgroup 3,03 - Meat subgroup 3,non_seasonal,Felipe Ortega,Derek Lin,36
+100044,100044,Dairy item 100044,5,33.9,Dairy,05 - Dairy,4,Dairy subgroup 4,04 - Dairy subgroup 4,non_seasonal,Hassan Mehta,Felipe Ortega,12
+100045,100045,Sparkling wine item 100045,2,31.43,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Brett Cho,Brett Cho,24
+100046,100046,Meat item 100046,9,13.98,Meat,09 - Meat,2,Meat subgroup 2,02 - Meat subgroup 2,non_seasonal,Brett Cho,Derek Lin,12
+100047,100047,Produce item 100047,6,22.46,Produce,06 - Produce,3,Produce subgroup 3,03 - Produce subgroup 3,Seasonal,Emily Faraday,Jamal Reed,24
+100048,100048,Beverage item 100048,11,33.72,Beverage,11 - Beverage,5,Beverage subgroup 5,05 - Beverage subgroup 5,non_seasonal,Emily Faraday,Brett Cho,24
+100049,100049,Wine item 100049,3,44.59,Wine,03 - Wine,3,Wine subgroup 3,03 - Wine subgroup 3,non_seasonal,Iris Tanaka,Carolyn Patel,36
+100050,100050,Dairy item 100050,5,36.15,Dairy,05 - Dairy,3,Dairy subgroup 3,03 - Dairy subgroup 3,non_seasonal,Emily Faraday,Iris Tanaka,8
+100051,100051,Frozen item 100051,8,5.51,Frozen,08 - Frozen,3,Frozen subgroup 3,03 - Frozen subgroup 3,non_seasonal,Emily Faraday,Anita Gomez,18
+100052,100052,Bakery item 100052,1,32.21,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Carolyn Patel,Hassan Mehta,12
+100053,100053,Meat item 100053,9,6.47,Meat,09 - Meat,4,Meat subgroup 4,04 - Meat subgroup 4,non_seasonal,Carolyn Patel,Iris Tanaka,36
+100054,100054,Bakery item 100054,1,22.05,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Emily Faraday,Felipe Ortega,6
+100055,100055,Bakery item 100055,1,34.41,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Brett Cho,Felipe Ortega,36
+100056,100056,Meat item 100056,9,46.35,Meat,09 - Meat,4,Meat subgroup 4,04 - Meat subgroup 4,non_seasonal,Carolyn Patel,Carolyn Patel,8
+100057,100057,Snacks item 100057,7,37.08,Snacks,07 - Snacks,1,Snacks subgroup 1,01 - Snacks subgroup 1,non_seasonal,Grace Wu,Derek Lin,12
+100058,100058,Dairy item 100058,5,19.73,Dairy,05 - Dairy,2,Dairy subgroup 2,02 - Dairy subgroup 2,non_seasonal,Hassan Mehta,Derek Lin,6
+100059,100059,Beer item 100059,4,15.94,Beer,04 - Beer,4,Beer subgroup 4,04 - Beer subgroup 4,non_seasonal,Derek Lin,Anita Gomez,8
+100060,100060,Beverage item 100060,11,17.07,Beverage,11 - Beverage,2,Beverage subgroup 2,02 - Beverage subgroup 2,non_seasonal,Emily Faraday,Felipe Ortega,6
+100061,100061,Beverage item 100061,11,34.29,Beverage,11 - Beverage,5,Beverage subgroup 5,05 - Beverage subgroup 5,non_seasonal,Felipe Ortega,Anita Gomez,24
+100062,100062,Sparkling wine item 100062,2,29.44,Sparkling wine,02 - Sparkling wine,3,Sparkling wine subgroup 3,03 - Sparkling wine subgroup 3,non_seasonal,Anita Gomez,Brett Cho,12
+100063,100063,Confectionery item 100063,10,36.69,Confectionery,10 - Confectionery,4,Confectionery subgroup 4,04 - Confectionery subgroup 4,non_seasonal,Grace Wu,Jamal Reed,12
+100064,100064,Meat item 100064,9,45.07,Meat,09 - Meat,1,Meat subgroup 1,01 - Meat subgroup 1,non_seasonal,Emily Faraday,Anita Gomez,8
+100065,100065,Seafood item 100065,12,26.47,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Derek Lin,Felipe Ortega,24
+100066,100066,Snacks item 100066,7,31.52,Snacks,07 - Snacks,1,Snacks subgroup 1,01 - Snacks subgroup 1,non_seasonal,Brett Cho,Emily Faraday,36
+100067,100067,Meat item 100067,9,16.97,Meat,09 - Meat,3,Meat subgroup 3,03 - Meat subgroup 3,non_seasonal,Emily Faraday,Iris Tanaka,36
+100068,100068,Wine item 100068,3,33.57,Wine,03 - Wine,2,Wine subgroup 2,02 - Wine subgroup 2,non_seasonal,Carolyn Patel,Jamal Reed,18
+100069,100069,Confectionery item 100069,10,27.84,Confectionery,10 - Confectionery,3,Confectionery subgroup 3,03 - Confectionery subgroup 3,non_seasonal,Emily Faraday,Emily Faraday,6
+100070,100070,Beer item 100070,4,30.72,Beer,04 - Beer,4,Beer subgroup 4,04 - Beer subgroup 4,non_seasonal,Hassan Mehta,Hassan Mehta,12
+100071,100071,Frozen item 100071,8,24.18,Frozen,08 - Frozen,2,Frozen subgroup 2,02 - Frozen subgroup 2,non_seasonal,Carolyn Patel,Brett Cho,36
+100072,100072,Dairy item 100072,5,5.57,Dairy,05 - Dairy,5,Dairy subgroup 5,05 - Dairy subgroup 5,non_seasonal,Emily Faraday,Derek Lin,8
+100073,100073,Beer item 100073,4,3.25,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Jamal Reed,Brett Cho,18
+100074,100074,Frozen item 100074,8,36.19,Frozen,08 - Frozen,4,Frozen subgroup 4,04 - Frozen subgroup 4,non_seasonal,Hassan Mehta,Grace Wu,18
+100075,100075,Beer item 100075,4,34.68,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Grace Wu,Derek Lin,6
+100076,100076,Wine item 100076,3,3.45,Wine,03 - Wine,5,Wine subgroup 5,05 - Wine subgroup 5,non_seasonal,Brett Cho,Hassan Mehta,8
+100077,100077,Wine item 100077,3,27.02,Wine,03 - Wine,4,Wine subgroup 4,04 - Wine subgroup 4,non_seasonal,Jamal Reed,Felipe Ortega,24
+100078,100078,Frozen item 100078,8,21.9,Frozen,08 - Frozen,5,Frozen subgroup 5,05 - Frozen subgroup 5,non_seasonal,Hassan Mehta,Carolyn Patel,24
+100079,100079,Seafood item 100079,12,13.69,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Emily Faraday,Iris Tanaka,8
+100080,100080,Frozen item 100080,8,22.54,Frozen,08 - Frozen,2,Frozen subgroup 2,02 - Frozen subgroup 2,non_seasonal,Emily Faraday,Derek Lin,36
+100081,100081,Dairy item 100081,5,44.75,Dairy,05 - Dairy,3,Dairy subgroup 3,03 - Dairy subgroup 3,non_seasonal,Carolyn Patel,Carolyn Patel,6
+100082,100082,Beer item 100082,4,8.48,Beer,04 - Beer,4,Beer subgroup 4,04 - Beer subgroup 4,non_seasonal,Brett Cho,Grace Wu,8
+100083,100083,Snacks item 100083,7,21.36,Snacks,07 - Snacks,3,Snacks subgroup 3,03 - Snacks subgroup 3,non_seasonal,Grace Wu,Grace Wu,8
+100084,100084,Confectionery item 100084,10,24.36,Confectionery,10 - Confectionery,1,Confectionery subgroup 1,01 - Confectionery subgroup 1,non_seasonal,Emily Faraday,Grace Wu,12
+100085,100085,Snacks item 100085,7,24.91,Snacks,07 - Snacks,5,Snacks subgroup 5,05 - Snacks subgroup 5,non_seasonal,Grace Wu,Hassan Mehta,12
+100086,100086,Bakery item 100086,1,33.76,Bakery,01 - Bakery,4,Bakery subgroup 4,04 - Bakery subgroup 4,non_seasonal,Carolyn Patel,Hassan Mehta,18
+100087,100087,Wine item 100087,3,2.31,Wine,03 - Wine,5,Wine subgroup 5,05 - Wine subgroup 5,non_seasonal,Jamal Reed,Jamal Reed,18
+100088,100088,Beverage item 100088,11,32.48,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Hassan Mehta,Carolyn Patel,8
+100089,100089,Bakery item 100089,1,17.03,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Felipe Ortega,Felipe Ortega,18
+100090,100090,Snacks item 100090,7,13.35,Snacks,07 - Snacks,3,Snacks subgroup 3,03 - Snacks subgroup 3,non_seasonal,Hassan Mehta,Anita Gomez,6
+100091,100091,Seafood item 100091,12,49.99,Seafood,12 - Seafood,5,Seafood subgroup 5,05 - Seafood subgroup 5,non_seasonal,Derek Lin,Brett Cho,12
+100092,100092,Beverage item 100092,11,47.52,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Anita Gomez,Jamal Reed,8
+100093,100093,Wine item 100093,3,24.19,Wine,03 - Wine,2,Wine subgroup 2,02 - Wine subgroup 2,non_seasonal,Jamal Reed,Derek Lin,6
+100094,100094,Frozen item 100094,8,9.21,Frozen,08 - Frozen,3,Frozen subgroup 3,03 - Frozen subgroup 3,non_seasonal,Brett Cho,Carolyn Patel,24
+100095,100095,Dairy item 100095,5,46.51,Dairy,05 - Dairy,1,Dairy subgroup 1,01 - Dairy subgroup 1,non_seasonal,Grace Wu,Grace Wu,24
+100096,100096,Seafood item 100096,12,30.0,Seafood,12 - Seafood,2,Seafood subgroup 2,02 - Seafood subgroup 2,non_seasonal,Derek Lin,Brett Cho,36
+100097,100097,Seafood item 100097,12,40.01,Seafood,12 - Seafood,3,Seafood subgroup 3,03 - Seafood subgroup 3,non_seasonal,Anita Gomez,Felipe Ortega,24
+100098,100098,Meat item 100098,9,4.37,Meat,09 - Meat,4,Meat subgroup 4,04 - Meat subgroup 4,non_seasonal,Felipe Ortega,Anita Gomez,36
+100099,100099,Snacks item 100099,7,22.23,Snacks,07 - Snacks,4,Snacks subgroup 4,04 - Snacks subgroup 4,non_seasonal,Hassan Mehta,Carolyn Patel,12
+100100,100100,Snacks item 100100,7,48.3,Snacks,07 - Snacks,2,Snacks subgroup 2,02 - Snacks subgroup 2,non_seasonal,Jamal Reed,Iris Tanaka,12
+100101,100101,Frozen item 100101,8,41.45,Frozen,08 - Frozen,4,Frozen subgroup 4,04 - Frozen subgroup 4,non_seasonal,Emily Faraday,Felipe Ortega,24
+100102,100102,Beer item 100102,4,44.19,Beer,04 - Beer,1,Beer subgroup 1,01 - Beer subgroup 1,non_seasonal,Hassan Mehta,Jamal Reed,8
+100103,100103,Confectionery item 100103,10,2.4,Confectionery,10 - Confectionery,4,Confectionery subgroup 4,04 - Confectionery subgroup 4,non_seasonal,Carolyn Patel,Hassan Mehta,12
+100104,100104,Beer item 100104,4,17.67,Beer,04 - Beer,3,Beer subgroup 3,03 - Beer subgroup 3,non_seasonal,Emily Faraday,Iris Tanaka,24
+100105,100105,Bakery item 100105,1,5.19,Bakery,01 - Bakery,5,Bakery subgroup 5,05 - Bakery subgroup 5,non_seasonal,Grace Wu,Hassan Mehta,36
+100106,100106,Meat item 100106,9,32.64,Meat,09 - Meat,2,Meat subgroup 2,02 - Meat subgroup 2,non_seasonal,Hassan Mehta,Anita Gomez,18
+100107,100107,Sparkling wine item 100107,2,20.81,Sparkling wine,02 - Sparkling wine,3,Sparkling wine subgroup 3,03 - Sparkling wine subgroup 3,non_seasonal,Emily Faraday,Jamal Reed,8
+100108,100108,Produce item 100108,6,17.83,Produce,06 - Produce,4,Produce subgroup 4,04 - Produce subgroup 4,Seasonal,Iris Tanaka,Felipe Ortega,36
+100109,100109,Produce item 100109,6,16.01,Produce,06 - Produce,4,Produce subgroup 4,04 - Produce subgroup 4,Seasonal,Brett Cho,Derek Lin,8
+100110,100110,Produce item 100110,6,10.38,Produce,06 - Produce,1,Produce subgroup 1,01 - Produce subgroup 1,Seasonal,Hassan Mehta,Emily Faraday,36
+100111,100111,Seafood item 100111,12,30.23,Seafood,12 - Seafood,5,Seafood subgroup 5,05 - Seafood subgroup 5,non_seasonal,Derek Lin,Emily Faraday,6
+100112,100112,Beer item 100112,4,15.8,Beer,04 - Beer,3,Beer subgroup 3,03 - Beer subgroup 3,non_seasonal,Iris Tanaka,Carolyn Patel,36
+100113,100113,Dairy item 100113,5,28.1,Dairy,05 - Dairy,1,Dairy subgroup 1,01 - Dairy subgroup 1,non_seasonal,Carolyn Patel,Hassan Mehta,36
+100114,100114,Sparkling wine item 100114,2,14.92,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Hassan Mehta,Felipe Ortega,18
+100115,100115,Wine item 100115,3,47.1,Wine,03 - Wine,1,Wine subgroup 1,01 - Wine subgroup 1,non_seasonal,Brett Cho,Brett Cho,18
+100116,100116,Snacks item 100116,7,29.26,Snacks,07 - Snacks,4,Snacks subgroup 4,04 - Snacks subgroup 4,non_seasonal,Anita Gomez,Carolyn Patel,36
+100117,100117,Wine item 100117,3,5.16,Wine,03 - Wine,5,Wine subgroup 5,05 - Wine subgroup 5,non_seasonal,Brett Cho,Iris Tanaka,8
+100118,100118,Snacks item 100118,7,39.0,Snacks,07 - Snacks,5,Snacks subgroup 5,05 - Snacks subgroup 5,non_seasonal,Hassan Mehta,Hassan Mehta,18
+100119,100119,Dairy item 100119,5,15.95,Dairy,05 - Dairy,5,Dairy subgroup 5,05 - Dairy subgroup 5,non_seasonal,Anita Gomez,Jamal Reed,24
+100120,100120,Seafood item 100120,12,31.64,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Brett Cho,Carolyn Patel,12
+100121,100121,Beer item 100121,4,4.67,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Grace Wu,Hassan Mehta,6
+100122,100122,Seafood item 100122,12,15.26,Seafood,12 - Seafood,5,Seafood subgroup 5,05 - Seafood subgroup 5,non_seasonal,Emily Faraday,Emily Faraday,8
+100123,100123,Seafood item 100123,12,34.67,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Jamal Reed,Derek Lin,12
+100124,100124,Snacks item 100124,7,32.72,Snacks,07 - Snacks,1,Snacks subgroup 1,01 - Snacks subgroup 1,non_seasonal,Carolyn Patel,Brett Cho,12
+100125,100125,Bakery item 100125,1,30.15,Bakery,01 - Bakery,2,Bakery subgroup 2,02 - Bakery subgroup 2,non_seasonal,Emily Faraday,Hassan Mehta,24
+100126,100126,Sparkling wine item 100126,2,15.89,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Emily Faraday,Iris Tanaka,18
+100127,100127,Meat item 100127,9,4.93,Meat,09 - Meat,4,Meat subgroup 4,04 - Meat subgroup 4,non_seasonal,Grace Wu,Felipe Ortega,6
+100128,100128,Confectionery item 100128,10,5.47,Confectionery,10 - Confectionery,3,Confectionery subgroup 3,03 - Confectionery subgroup 3,non_seasonal,Jamal Reed,Jamal Reed,36
+100129,100129,Bakery item 100129,1,38.38,Bakery,01 - Bakery,3,Bakery subgroup 3,03 - Bakery subgroup 3,non_seasonal,Hassan Mehta,Iris Tanaka,8
+100130,100130,Beverage item 100130,11,9.88,Beverage,11 - Beverage,4,Beverage subgroup 4,04 - Beverage subgroup 4,non_seasonal,Grace Wu,Hassan Mehta,24
+100131,100131,Sparkling wine item 100131,2,21.0,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Brett Cho,Carolyn Patel,12
+100132,100132,Produce item 100132,6,15.11,Produce,06 - Produce,4,Produce subgroup 4,04 - Produce subgroup 4,Seasonal,Iris Tanaka,Anita Gomez,18
+100133,100133,Frozen item 100133,8,13.36,Frozen,08 - Frozen,1,Frozen subgroup 1,01 - Frozen subgroup 1,non_seasonal,Grace Wu,Iris Tanaka,6
+100134,100134,Bakery item 100134,1,21.24,Bakery,01 - Bakery,5,Bakery subgroup 5,05 - Bakery subgroup 5,non_seasonal,Iris Tanaka,Felipe Ortega,8
+100135,100135,Confectionery item 100135,10,38.23,Confectionery,10 - Confectionery,4,Confectionery subgroup 4,04 - Confectionery subgroup 4,non_seasonal,Emily Faraday,Iris Tanaka,8
+100136,100136,Wine item 100136,3,44.15,Wine,03 - Wine,3,Wine subgroup 3,03 - Wine subgroup 3,non_seasonal,Brett Cho,Anita Gomez,18
+100137,100137,Beverage item 100137,11,35.77,Beverage,11 - Beverage,5,Beverage subgroup 5,05 - Beverage subgroup 5,non_seasonal,Iris Tanaka,Anita Gomez,12
+100138,100138,Meat item 100138,9,12.0,Meat,09 - Meat,4,Meat subgroup 4,04 - Meat subgroup 4,non_seasonal,Hassan Mehta,Brett Cho,6
+100139,100139,Beverage item 100139,11,46.69,Beverage,11 - Beverage,2,Beverage subgroup 2,02 - Beverage subgroup 2,non_seasonal,Iris Tanaka,Emily Faraday,12
+100140,100140,Snacks item 100140,7,12.93,Snacks,07 - Snacks,4,Snacks subgroup 4,04 - Snacks subgroup 4,non_seasonal,Carolyn Patel,Grace Wu,24
+100141,100141,Beer item 100141,4,37.56,Beer,04 - Beer,5,Beer subgroup 5,05 - Beer subgroup 5,non_seasonal,Brett Cho,Emily Faraday,8
+100142,100142,Snacks item 100142,7,14.08,Snacks,07 - Snacks,3,Snacks subgroup 3,03 - Snacks subgroup 3,non_seasonal,Emily Faraday,Emily Faraday,6
+100143,100143,Confectionery item 100143,10,43.39,Confectionery,10 - Confectionery,5,Confectionery subgroup 5,05 - Confectionery subgroup 5,non_seasonal,Iris Tanaka,Hassan Mehta,18
+100144,100144,Produce item 100144,6,23.3,Produce,06 - Produce,3,Produce subgroup 3,03 - Produce subgroup 3,Seasonal,Derek Lin,Derek Lin,12
+100145,100145,Confectionery item 100145,10,42.93,Confectionery,10 - Confectionery,4,Confectionery subgroup 4,04 - Confectionery subgroup 4,non_seasonal,Anita Gomez,Felipe Ortega,18
+100146,100146,Seafood item 100146,12,19.91,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Carolyn Patel,Hassan Mehta,36
+100147,100147,Bakery item 100147,1,48.29,Bakery,01 - Bakery,2,Bakery subgroup 2,02 - Bakery subgroup 2,non_seasonal,Brett Cho,Hassan Mehta,12
+100148,100148,Sparkling wine item 100148,2,1.74,Sparkling wine,02 - Sparkling wine,5,Sparkling wine subgroup 5,05 - Sparkling wine subgroup 5,non_seasonal,Grace Wu,Carolyn Patel,8
+100149,100149,Sparkling wine item 100149,2,17.58,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Grace Wu,Brett Cho,36
+100150,100150,Produce item 100150,6,47.74,Produce,06 - Produce,5,Produce subgroup 5,05 - Produce subgroup 5,Seasonal,Hassan Mehta,Iris Tanaka,36
+100151,100151,Bakery item 100151,1,12.49,Bakery,01 - Bakery,5,Bakery subgroup 5,05 - Bakery subgroup 5,non_seasonal,Emily Faraday,Derek Lin,36
+100152,100152,Seafood item 100152,12,48.93,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Brett Cho,Hassan Mehta,36
+100153,100153,Wine item 100153,3,3.24,Wine,03 - Wine,3,Wine subgroup 3,03 - Wine subgroup 3,non_seasonal,Emily Faraday,Felipe Ortega,6
+100154,100154,Produce item 100154,6,12.96,Produce,06 - Produce,4,Produce subgroup 4,04 - Produce subgroup 4,Seasonal,Jamal Reed,Carolyn Patel,18
+100155,100155,Wine item 100155,3,30.86,Wine,03 - Wine,2,Wine subgroup 2,02 - Wine subgroup 2,non_seasonal,Jamal Reed,Derek Lin,18
+100156,100156,Frozen item 100156,8,12.37,Frozen,08 - Frozen,5,Frozen subgroup 5,05 - Frozen subgroup 5,non_seasonal,Emily Faraday,Hassan Mehta,36
+100157,100157,Dairy item 100157,5,45.15,Dairy,05 - Dairy,1,Dairy subgroup 1,01 - Dairy subgroup 1,non_seasonal,Iris Tanaka,Carolyn Patel,36
+100158,100158,Sparkling wine item 100158,2,49.38,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Grace Wu,Emily Faraday,12
+100159,100159,Frozen item 100159,8,49.96,Frozen,08 - Frozen,3,Frozen subgroup 3,03 - Frozen subgroup 3,non_seasonal,Brett Cho,Derek Lin,18
+100160,100160,Snacks item 100160,7,29.16,Snacks,07 - Snacks,5,Snacks subgroup 5,05 - Snacks subgroup 5,non_seasonal,Emily Faraday,Anita Gomez,36
+100161,100161,Beverage item 100161,11,1.39,Beverage,11 - Beverage,4,Beverage subgroup 4,04 - Beverage subgroup 4,non_seasonal,Anita Gomez,Jamal Reed,36
+100162,100162,Seafood item 100162,12,39.0,Seafood,12 - Seafood,4,Seafood subgroup 4,04 - Seafood subgroup 4,non_seasonal,Jamal Reed,Felipe Ortega,8
+100163,100163,Beer item 100163,4,13.27,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Carolyn Patel,Brett Cho,36
+100164,100164,Beverage item 100164,11,39.63,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Jamal Reed,Felipe Ortega,6
+100165,100165,Seafood item 100165,12,45.56,Seafood,12 - Seafood,2,Seafood subgroup 2,02 - Seafood subgroup 2,non_seasonal,Grace Wu,Carolyn Patel,12
+100166,100166,Beer item 100166,4,43.94,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Iris Tanaka,Iris Tanaka,12
+100167,100167,Dairy item 100167,5,45.78,Dairy,05 - Dairy,2,Dairy subgroup 2,02 - Dairy subgroup 2,non_seasonal,Emily Faraday,Felipe Ortega,18
+100168,100168,Sparkling wine item 100168,2,7.89,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Grace Wu,Iris Tanaka,8
+100169,100169,Produce item 100169,6,1.67,Produce,06 - Produce,1,Produce subgroup 1,01 - Produce subgroup 1,Seasonal,Brett Cho,Hassan Mehta,24
+100170,100170,Produce item 100170,6,41.29,Produce,06 - Produce,3,Produce subgroup 3,03 - Produce subgroup 3,Seasonal,Brett Cho,Derek Lin,12
+100171,100171,Frozen item 100171,8,45.84,Frozen,08 - Frozen,1,Frozen subgroup 1,01 - Frozen subgroup 1,non_seasonal,Brett Cho,Hassan Mehta,8
+100172,100172,Seafood item 100172,12,6.71,Seafood,12 - Seafood,3,Seafood subgroup 3,03 - Seafood subgroup 3,non_seasonal,Anita Gomez,Emily Faraday,6
+100173,100173,Frozen item 100173,8,12.5,Frozen,08 - Frozen,1,Frozen subgroup 1,01 - Frozen subgroup 1,non_seasonal,Carolyn Patel,Grace Wu,24
+100174,100174,Frozen item 100174,8,29.77,Frozen,08 - Frozen,3,Frozen subgroup 3,03 - Frozen subgroup 3,non_seasonal,Carolyn Patel,Grace Wu,36
+100175,100175,Beverage item 100175,11,31.16,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Anita Gomez,Felipe Ortega,12
+100176,100176,Beer item 100176,4,47.57,Beer,04 - Beer,4,Beer subgroup 4,04 - Beer subgroup 4,non_seasonal,Brett Cho,Felipe Ortega,12
+100177,100177,Meat item 100177,9,20.5,Meat,09 - Meat,3,Meat subgroup 3,03 - Meat subgroup 3,non_seasonal,Brett Cho,Hassan Mehta,8
+100178,100178,Sparkling wine item 100178,2,32.33,Sparkling wine,02 - Sparkling wine,2,Sparkling wine subgroup 2,02 - Sparkling wine subgroup 2,non_seasonal,Anita Gomez,Felipe Ortega,6
+100179,100179,Beer item 100179,4,11.05,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Derek Lin,Jamal Reed,24
+100180,100180,Beer item 100180,4,38.93,Beer,04 - Beer,2,Beer subgroup 2,02 - Beer subgroup 2,non_seasonal,Anita Gomez,Emily Faraday,24
+100181,100181,Wine item 100181,3,13.27,Wine,03 - Wine,2,Wine subgroup 2,02 - Wine subgroup 2,non_seasonal,Brett Cho,Anita Gomez,8
+100182,100182,Wine item 100182,3,39.7,Wine,03 - Wine,1,Wine subgroup 1,01 - Wine subgroup 1,non_seasonal,Jamal Reed,Felipe Ortega,8
+100183,100183,Bakery item 100183,1,3.56,Bakery,01 - Bakery,2,Bakery subgroup 2,02 - Bakery subgroup 2,non_seasonal,Grace Wu,Iris Tanaka,36
+100184,100184,Sparkling wine item 100184,2,22.96,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Iris Tanaka,Jamal Reed,12
+100185,100185,Sparkling wine item 100185,2,11.85,Sparkling wine,02 - Sparkling wine,4,Sparkling wine subgroup 4,04 - Sparkling wine subgroup 4,non_seasonal,Anita Gomez,Iris Tanaka,24
+100186,100186,Dairy item 100186,5,3.97,Dairy,05 - Dairy,4,Dairy subgroup 4,04 - Dairy subgroup 4,non_seasonal,Grace Wu,Grace Wu,18
+100187,100187,Beverage item 100187,11,35.9,Beverage,11 - Beverage,1,Beverage subgroup 1,01 - Beverage subgroup 1,non_seasonal,Brett Cho,Brett Cho,18
+100188,100188,Produce item 100188,6,4.21,Produce,06 - Produce,5,Produce subgroup 5,05 - Produce subgroup 5,Seasonal,Jamal Reed,Jamal Reed,12
+100189,100189,Meat item 100189,9,49.73,Meat,09 - Meat,3,Meat subgroup 3,03 - Meat subgroup 3,non_seasonal,Emily Faraday,Hassan Mehta,24
+100190,100190,Meat item 100190,9,5.85,Meat,09 - Meat,5,Meat subgroup 5,05 - Meat subgroup 5,non_seasonal,Brett Cho,Iris Tanaka,36
+100191,100191,Seafood item 100191,12,23.12,Seafood,12 - Seafood,2,Seafood subgroup 2,02 - Seafood subgroup 2,non_seasonal,Grace Wu,Felipe Ortega,8
+100192,100192,Frozen item 100192,8,36.74,Frozen,08 - Frozen,4,Frozen subgroup 4,04 - Frozen subgroup 4,non_seasonal,Grace Wu,Felipe Ortega,12
+100193,100193,Beverage item 100193,11,47.72,Beverage,11 - Beverage,3,Beverage subgroup 3,03 - Beverage subgroup 3,non_seasonal,Hassan Mehta,Brett Cho,36
+100194,100194,Sparkling wine item 100194,2,22.15,Sparkling wine,02 - Sparkling wine,1,Sparkling wine subgroup 1,01 - Sparkling wine subgroup 1,non_seasonal,Felipe Ortega,Carolyn Patel,36
+100195,100195,Meat item 100195,9,33.82,Meat,09 - Meat,1,Meat subgroup 1,01 - Meat subgroup 1,non_seasonal,Felipe Ortega,Grace Wu,18
+100196,100196,Seafood item 100196,12,30.41,Seafood,12 - Seafood,1,Seafood subgroup 1,01 - Seafood subgroup 1,non_seasonal,Brett Cho,Jamal Reed,12
+100197,100197,Meat item 100197,9,33.17,Meat,09 - Meat,2,Meat subgroup 2,02 - Meat subgroup 2,non_seasonal,Brett Cho,Felipe Ortega,8
+100198,100198,Meat item 100198,9,38.36,Meat,09 - Meat,3,Meat subgroup 3,03 - Meat subgroup 3,non_seasonal,Derek Lin,Grace Wu,24
+100199,100199,Meat item 100199,9,30.83,Meat,09 - Meat,5,Meat subgroup 5,05 - Meat subgroup 5,non_seasonal,Emily Faraday,Anita Gomez,36

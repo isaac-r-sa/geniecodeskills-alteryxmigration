@@ -1,0 +1,601 @@
+Item  Code,Description,CG,SCG,Year,Team
+100073,Beer item 100073,04 - Beer,02 - Beer subgroup 2,2027,SST
+100073,Beer item 100073,04 - Beer,02 - Beer subgroup 2,2028,VCO
+100073,Beer item 100073,04 - Beer,02 - Beer subgroup 2,2029,
+100073,Beer item 100073,04 - Beer,02 - Beer subgroup 2,2030,SST
+100073,Beer item 100073,04 - Beer,02 - Beer subgroup 2,2031,SST
+100036,Wine item 100036,03 - Wine,04 - Wine subgroup 4,2027,VCO
+100036,Wine item 100036,03 - Wine,04 - Wine subgroup 4,2028,SST
+100036,Wine item 100036,03 - Wine,04 - Wine subgroup 4,2029,
+100036,Wine item 100036,03 - Wine,04 - Wine subgroup 4,2030,SST
+100036,Wine item 100036,03 - Wine,04 - Wine subgroup 4,2031,SST
+100046,Meat item 100046,09 - Meat,02 - Meat subgroup 2,2027,VCO
+100046,Meat item 100046,09 - Meat,02 - Meat subgroup 2,2028,
+100046,Meat item 100046,09 - Meat,02 - Meat subgroup 2,2029,
+100046,Meat item 100046,09 - Meat,02 - Meat subgroup 2,2030,
+100046,Meat item 100046,09 - Meat,02 - Meat subgroup 2,2031,SST
+100065,Seafood item 100065,12 - Seafood,04 - Seafood subgroup 4,2027,SST
+100065,Seafood item 100065,12 - Seafood,04 - Seafood subgroup 4,2028,SST
+100065,Seafood item 100065,12 - Seafood,04 - Seafood subgroup 4,2029,
+100065,Seafood item 100065,12 - Seafood,04 - Seafood subgroup 4,2030,SST
+100065,Seafood item 100065,12 - Seafood,04 - Seafood subgroup 4,2031,SST
+100022,Confectionery item 100022,10 - Confectionery,03 - Confectionery subgroup 3,2027,
+100022,Confectionery item 100022,10 - Confectionery,03 - Confectionery subgroup 3,2028,SST
+100022,Confectionery item 100022,10 - Confectionery,03 - Confectionery subgroup 3,2029,
+100022,Confectionery item 100022,10 - Confectionery,03 - Confectionery subgroup 3,2030,VCO
+100022,Confectionery item 100022,10 - Confectionery,03 - Confectionery subgroup 3,2031,SST
+100039,Confectionery item 100039,10 - Confectionery,05 - Confectionery subgroup 5,2027,SST
+100039,Confectionery item 100039,10 - Confectionery,05 - Confectionery subgroup 5,2028,
+100039,Confectionery item 100039,10 - Confectionery,05 - Confectionery subgroup 5,2029,SST
+100039,Confectionery item 100039,10 - Confectionery,05 - Confectionery subgroup 5,2030,VCO
+100039,Confectionery item 100039,10 - Confectionery,05 - Confectionery subgroup 5,2031,
+100078,Frozen item 100078,08 - Frozen,05 - Frozen subgroup 5,2027,SST
+100078,Frozen item 100078,08 - Frozen,05 - Frozen subgroup 5,2028,VCO
+100078,Frozen item 100078,08 - Frozen,05 - Frozen subgroup 5,2029,SST
+100078,Frozen item 100078,08 - Frozen,05 - Frozen subgroup 5,2030,SST
+100078,Frozen item 100078,08 - Frozen,05 - Frozen subgroup 5,2031,SST
+100104,Beer item 100104,04 - Beer,03 - Beer subgroup 3,2027,VCO
+100104,Beer item 100104,04 - Beer,03 - Beer subgroup 3,2028,SST
+100104,Beer item 100104,04 - Beer,03 - Beer subgroup 3,2029,SST
+100104,Beer item 100104,04 - Beer,03 - Beer subgroup 3,2030,VCO
+100104,Beer item 100104,04 - Beer,03 - Beer subgroup 3,2031,VCO
+100173,Frozen item 100173,08 - Frozen,01 - Frozen subgroup 1,2027,
+100173,Frozen item 100173,08 - Frozen,01 - Frozen subgroup 1,2028,SST
+100173,Frozen item 100173,08 - Frozen,01 - Frozen subgroup 1,2029,SST
+100173,Frozen item 100173,08 - Frozen,01 - Frozen subgroup 1,2030,SST
+100173,Frozen item 100173,08 - Frozen,01 - Frozen subgroup 1,2031,
+100043,Meat item 100043,09 - Meat,03 - Meat subgroup 3,2027,VCO
+100043,Meat item 100043,09 - Meat,03 - Meat subgroup 3,2028,SST
+100043,Meat item 100043,09 - Meat,03 - Meat subgroup 3,2029,VCO
+100043,Meat item 100043,09 - Meat,03 - Meat subgroup 3,2030,
+100043,Meat item 100043,09 - Meat,03 - Meat subgroup 3,2031,SST
+100015,Snacks item 100015,07 - Snacks,05 - Snacks subgroup 5,2027,SST
+100015,Snacks item 100015,07 - Snacks,05 - Snacks subgroup 5,2028,
+100015,Snacks item 100015,07 - Snacks,05 - Snacks subgroup 5,2029,VCO
+100015,Snacks item 100015,07 - Snacks,05 - Snacks subgroup 5,2030,VCO
+100015,Snacks item 100015,07 - Snacks,05 - Snacks subgroup 5,2031,VCO
+100157,Dairy item 100157,05 - Dairy,01 - Dairy subgroup 1,2027,SST
+100157,Dairy item 100157,05 - Dairy,01 - Dairy subgroup 1,2028,VCO
+100157,Dairy item 100157,05 - Dairy,01 - Dairy subgroup 1,2029,SST
+100157,Dairy item 100157,05 - Dairy,01 - Dairy subgroup 1,2030,VCO
+100157,Dairy item 100157,05 - Dairy,01 - Dairy subgroup 1,2031,SST
+100083,Snacks item 100083,07 - Snacks,03 - Snacks subgroup 3,2027,VCO
+100083,Snacks item 100083,07 - Snacks,03 - Snacks subgroup 3,2028,SST
+100083,Snacks item 100083,07 - Snacks,03 - Snacks subgroup 3,2029,VCO
+100083,Snacks item 100083,07 - Snacks,03 - Snacks subgroup 3,2030,SST
+100083,Snacks item 100083,07 - Snacks,03 - Snacks subgroup 3,2031,SST
+100197,Meat item 100197,09 - Meat,02 - Meat subgroup 2,2027,
+100197,Meat item 100197,09 - Meat,02 - Meat subgroup 2,2028,SST
+100197,Meat item 100197,09 - Meat,02 - Meat subgroup 2,2029,
+100197,Meat item 100197,09 - Meat,02 - Meat subgroup 2,2030,SST
+100197,Meat item 100197,09 - Meat,02 - Meat subgroup 2,2031,SST
+100006,Seafood item 100006,12 - Seafood,04 - Seafood subgroup 4,2027,
+100006,Seafood item 100006,12 - Seafood,04 - Seafood subgroup 4,2028,
+100006,Seafood item 100006,12 - Seafood,04 - Seafood subgroup 4,2029,SST
+100006,Seafood item 100006,12 - Seafood,04 - Seafood subgroup 4,2030,SST
+100006,Seafood item 100006,12 - Seafood,04 - Seafood subgroup 4,2031,
+100182,Wine item 100182,03 - Wine,01 - Wine subgroup 1,2027,
+100182,Wine item 100182,03 - Wine,01 - Wine subgroup 1,2028,SST
+100182,Wine item 100182,03 - Wine,01 - Wine subgroup 1,2029,SST
+100182,Wine item 100182,03 - Wine,01 - Wine subgroup 1,2030,VCO
+100182,Wine item 100182,03 - Wine,01 - Wine subgroup 1,2031,SST
+100014,Dairy item 100014,05 - Dairy,02 - Dairy subgroup 2,2027,SST
+100014,Dairy item 100014,05 - Dairy,02 - Dairy subgroup 2,2028,
+100014,Dairy item 100014,05 - Dairy,02 - Dairy subgroup 2,2029,
+100014,Dairy item 100014,05 - Dairy,02 - Dairy subgroup 2,2030,SST
+100014,Dairy item 100014,05 - Dairy,02 - Dairy subgroup 2,2031,SST
+100076,Wine item 100076,03 - Wine,05 - Wine subgroup 5,2027,
+100076,Wine item 100076,03 - Wine,05 - Wine subgroup 5,2028,VCO
+100076,Wine item 100076,03 - Wine,05 - Wine subgroup 5,2029,SST
+100076,Wine item 100076,03 - Wine,05 - Wine subgroup 5,2030,SST
+100076,Wine item 100076,03 - Wine,05 - Wine subgroup 5,2031,SST
+100099,Snacks item 100099,07 - Snacks,04 - Snacks subgroup 4,2027,VCO
+100099,Snacks item 100099,07 - Snacks,04 - Snacks subgroup 4,2028,
+100099,Snacks item 100099,07 - Snacks,04 - Snacks subgroup 4,2029,SST
+100099,Snacks item 100099,07 - Snacks,04 - Snacks subgroup 4,2030,VCO
+100099,Snacks item 100099,07 - Snacks,04 - Snacks subgroup 4,2031,VCO
+100025,Meat item 100025,09 - Meat,05 - Meat subgroup 5,2027,VCO
+100025,Meat item 100025,09 - Meat,05 - Meat subgroup 5,2028,SST
+100025,Meat item 100025,09 - Meat,05 - Meat subgroup 5,2029,SST
+100025,Meat item 100025,09 - Meat,05 - Meat subgroup 5,2030,SST
+100025,Meat item 100025,09 - Meat,05 - Meat subgroup 5,2031,SST
+100081,Dairy item 100081,05 - Dairy,03 - Dairy subgroup 3,2027,SST
+100081,Dairy item 100081,05 - Dairy,03 - Dairy subgroup 3,2028,
+100081,Dairy item 100081,05 - Dairy,03 - Dairy subgroup 3,2029,
+100081,Dairy item 100081,05 - Dairy,03 - Dairy subgroup 3,2030,SST
+100081,Dairy item 100081,05 - Dairy,03 - Dairy subgroup 3,2031,SST
+100198,Meat item 100198,09 - Meat,03 - Meat subgroup 3,2027,SST
+100198,Meat item 100198,09 - Meat,03 - Meat subgroup 3,2028,VCO
+100198,Meat item 100198,09 - Meat,03 - Meat subgroup 3,2029,SST
+100198,Meat item 100198,09 - Meat,03 - Meat subgroup 3,2030,
+100198,Meat item 100198,09 - Meat,03 - Meat subgroup 3,2031,VCO
+100105,Bakery item 100105,01 - Bakery,05 - Bakery subgroup 5,2027,SST
+100105,Bakery item 100105,01 - Bakery,05 - Bakery subgroup 5,2028,SST
+100105,Bakery item 100105,01 - Bakery,05 - Bakery subgroup 5,2029,SST
+100105,Bakery item 100105,01 - Bakery,05 - Bakery subgroup 5,2030,VCO
+100105,Bakery item 100105,01 - Bakery,05 - Bakery subgroup 5,2031,SST
+100082,Beer item 100082,04 - Beer,04 - Beer subgroup 4,2027,
+100082,Beer item 100082,04 - Beer,04 - Beer subgroup 4,2028,SST
+100082,Beer item 100082,04 - Beer,04 - Beer subgroup 4,2029,
+100082,Beer item 100082,04 - Beer,04 - Beer subgroup 4,2030,SST
+100082,Beer item 100082,04 - Beer,04 - Beer subgroup 4,2031,SST
+100066,Snacks item 100066,07 - Snacks,01 - Snacks subgroup 1,2027,SST
+100066,Snacks item 100066,07 - Snacks,01 - Snacks subgroup 1,2028,SST
+100066,Snacks item 100066,07 - Snacks,01 - Snacks subgroup 1,2029,
+100066,Snacks item 100066,07 - Snacks,01 - Snacks subgroup 1,2030,SST
+100066,Snacks item 100066,07 - Snacks,01 - Snacks subgroup 1,2031,SST
+100096,Seafood item 100096,12 - Seafood,02 - Seafood subgroup 2,2027,VCO
+100096,Seafood item 100096,12 - Seafood,02 - Seafood subgroup 2,2028,SST
+100096,Seafood item 100096,12 - Seafood,02 - Seafood subgroup 2,2029,
+100096,Seafood item 100096,12 - Seafood,02 - Seafood subgroup 2,2030,SST
+100096,Seafood item 100096,12 - Seafood,02 - Seafood subgroup 2,2031,SST
+100030,Meat item 100030,09 - Meat,02 - Meat subgroup 2,2027,
+100030,Meat item 100030,09 - Meat,02 - Meat subgroup 2,2028,SST
+100030,Meat item 100030,09 - Meat,02 - Meat subgroup 2,2029,SST
+100030,Meat item 100030,09 - Meat,02 - Meat subgroup 2,2030,SST
+100030,Meat item 100030,09 - Meat,02 - Meat subgroup 2,2031,SST
+100013,Beverage item 100013,11 - Beverage,04 - Beverage subgroup 4,2027,SST
+100013,Beverage item 100013,11 - Beverage,04 - Beverage subgroup 4,2028,
+100013,Beverage item 100013,11 - Beverage,04 - Beverage subgroup 4,2029,
+100013,Beverage item 100013,11 - Beverage,04 - Beverage subgroup 4,2030,SST
+100013,Beverage item 100013,11 - Beverage,04 - Beverage subgroup 4,2031,
+100051,Frozen item 100051,08 - Frozen,03 - Frozen subgroup 3,2027,VCO
+100051,Frozen item 100051,08 - Frozen,03 - Frozen subgroup 3,2028,SST
+100051,Frozen item 100051,08 - Frozen,03 - Frozen subgroup 3,2029,
+100051,Frozen item 100051,08 - Frozen,03 - Frozen subgroup 3,2030,
+100051,Frozen item 100051,08 - Frozen,03 - Frozen subgroup 3,2031,
+100061,Beverage item 100061,11 - Beverage,05 - Beverage subgroup 5,2027,
+100061,Beverage item 100061,11 - Beverage,05 - Beverage subgroup 5,2028,SST
+100061,Beverage item 100061,11 - Beverage,05 - Beverage subgroup 5,2029,SST
+100061,Beverage item 100061,11 - Beverage,05 - Beverage subgroup 5,2030,SST
+100061,Beverage item 100061,11 - Beverage,05 - Beverage subgroup 5,2031,
+100152,Seafood item 100152,12 - Seafood,01 - Seafood subgroup 1,2027,SST
+100152,Seafood item 100152,12 - Seafood,01 - Seafood subgroup 1,2028,VCO
+100152,Seafood item 100152,12 - Seafood,01 - Seafood subgroup 1,2029,SST
+100152,Seafood item 100152,12 - Seafood,01 - Seafood subgroup 1,2030,SST
+100152,Seafood item 100152,12 - Seafood,01 - Seafood subgroup 1,2031,SST
+100150,Produce item 100150,06 - Produce,05 - Produce subgroup 5,2027,SST
+100150,Produce item 100150,06 - Produce,05 - Produce subgroup 5,2028,VCO
+100150,Produce item 100150,06 - Produce,05 - Produce subgroup 5,2029,VCO
+100150,Produce item 100150,06 - Produce,05 - Produce subgroup 5,2030,SST
+100150,Produce item 100150,06 - Produce,05 - Produce subgroup 5,2031,SST
+100060,Beverage item 100060,11 - Beverage,02 - Beverage subgroup 2,2027,
+100060,Beverage item 100060,11 - Beverage,02 - Beverage subgroup 2,2028,
+100060,Beverage item 100060,11 - Beverage,02 - Beverage subgroup 2,2029,
+100060,Beverage item 100060,11 - Beverage,02 - Beverage subgroup 2,2030,VCO
+100060,Beverage item 100060,11 - Beverage,02 - Beverage subgroup 2,2031,VCO
+100126,Sparkling wine item 100126,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2027,VCO
+100126,Sparkling wine item 100126,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2028,SST
+100126,Sparkling wine item 100126,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2029,SST
+100126,Sparkling wine item 100126,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2030,VCO
+100126,Sparkling wine item 100126,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2031,SST
+100130,Beverage item 100130,11 - Beverage,04 - Beverage subgroup 4,2027,
+100130,Beverage item 100130,11 - Beverage,04 - Beverage subgroup 4,2028,SST
+100130,Beverage item 100130,11 - Beverage,04 - Beverage subgroup 4,2029,SST
+100130,Beverage item 100130,11 - Beverage,04 - Beverage subgroup 4,2030,VCO
+100130,Beverage item 100130,11 - Beverage,04 - Beverage subgroup 4,2031,VCO
+100129,Bakery item 100129,01 - Bakery,03 - Bakery subgroup 3,2027,
+100129,Bakery item 100129,01 - Bakery,03 - Bakery subgroup 3,2028,SST
+100129,Bakery item 100129,01 - Bakery,03 - Bakery subgroup 3,2029,SST
+100129,Bakery item 100129,01 - Bakery,03 - Bakery subgroup 3,2030,SST
+100129,Bakery item 100129,01 - Bakery,03 - Bakery subgroup 3,2031,SST
+100098,Meat item 100098,09 - Meat,04 - Meat subgroup 4,2027,SST
+100098,Meat item 100098,09 - Meat,04 - Meat subgroup 4,2028,VCO
+100098,Meat item 100098,09 - Meat,04 - Meat subgroup 4,2029,SST
+100098,Meat item 100098,09 - Meat,04 - Meat subgroup 4,2030,VCO
+100098,Meat item 100098,09 - Meat,04 - Meat subgroup 4,2031,SST
+100029,Bakery item 100029,01 - Bakery,03 - Bakery subgroup 3,2027,
+100029,Bakery item 100029,01 - Bakery,03 - Bakery subgroup 3,2028,SST
+100029,Bakery item 100029,01 - Bakery,03 - Bakery subgroup 3,2029,VCO
+100029,Bakery item 100029,01 - Bakery,03 - Bakery subgroup 3,2030,VCO
+100029,Bakery item 100029,01 - Bakery,03 - Bakery subgroup 3,2031,VCO
+100068,Wine item 100068,03 - Wine,02 - Wine subgroup 2,2027,SST
+100068,Wine item 100068,03 - Wine,02 - Wine subgroup 2,2028,SST
+100068,Wine item 100068,03 - Wine,02 - Wine subgroup 2,2029,VCO
+100068,Wine item 100068,03 - Wine,02 - Wine subgroup 2,2030,
+100068,Wine item 100068,03 - Wine,02 - Wine subgroup 2,2031,
+100189,Meat item 100189,09 - Meat,03 - Meat subgroup 3,2027,SST
+100189,Meat item 100189,09 - Meat,03 - Meat subgroup 3,2028,SST
+100189,Meat item 100189,09 - Meat,03 - Meat subgroup 3,2029,SST
+100189,Meat item 100189,09 - Meat,03 - Meat subgroup 3,2030,
+100189,Meat item 100189,09 - Meat,03 - Meat subgroup 3,2031,SST
+100179,Beer item 100179,04 - Beer,02 - Beer subgroup 2,2027,VCO
+100179,Beer item 100179,04 - Beer,02 - Beer subgroup 2,2028,SST
+100179,Beer item 100179,04 - Beer,02 - Beer subgroup 2,2029,
+100179,Beer item 100179,04 - Beer,02 - Beer subgroup 2,2030,SST
+100179,Beer item 100179,04 - Beer,02 - Beer subgroup 2,2031,
+100118,Snacks item 100118,07 - Snacks,05 - Snacks subgroup 5,2027,VCO
+100118,Snacks item 100118,07 - Snacks,05 - Snacks subgroup 5,2028,SST
+100118,Snacks item 100118,07 - Snacks,05 - Snacks subgroup 5,2029,VCO
+100118,Snacks item 100118,07 - Snacks,05 - Snacks subgroup 5,2030,VCO
+100118,Snacks item 100118,07 - Snacks,05 - Snacks subgroup 5,2031,
+100141,Beer item 100141,04 - Beer,05 - Beer subgroup 5,2027,VCO
+100141,Beer item 100141,04 - Beer,05 - Beer subgroup 5,2028,VCO
+100141,Beer item 100141,04 - Beer,05 - Beer subgroup 5,2029,
+100141,Beer item 100141,04 - Beer,05 - Beer subgroup 5,2030,SST
+100141,Beer item 100141,04 - Beer,05 - Beer subgroup 5,2031,
+100192,Frozen item 100192,08 - Frozen,04 - Frozen subgroup 4,2027,VCO
+100192,Frozen item 100192,08 - Frozen,04 - Frozen subgroup 4,2028,
+100192,Frozen item 100192,08 - Frozen,04 - Frozen subgroup 4,2029,VCO
+100192,Frozen item 100192,08 - Frozen,04 - Frozen subgroup 4,2030,SST
+100192,Frozen item 100192,08 - Frozen,04 - Frozen subgroup 4,2031,SST
+100016,Sparkling wine item 100016,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2027,SST
+100016,Sparkling wine item 100016,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2028,SST
+100016,Sparkling wine item 100016,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2029,SST
+100016,Sparkling wine item 100016,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2030,SST
+100016,Sparkling wine item 100016,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2031,SST
+100123,Seafood item 100123,12 - Seafood,04 - Seafood subgroup 4,2027,VCO
+100123,Seafood item 100123,12 - Seafood,04 - Seafood subgroup 4,2028,SST
+100123,Seafood item 100123,12 - Seafood,04 - Seafood subgroup 4,2029,
+100123,Seafood item 100123,12 - Seafood,04 - Seafood subgroup 4,2030,VCO
+100123,Seafood item 100123,12 - Seafood,04 - Seafood subgroup 4,2031,SST
+100007,Dairy item 100007,05 - Dairy,05 - Dairy subgroup 5,2027,SST
+100007,Dairy item 100007,05 - Dairy,05 - Dairy subgroup 5,2028,SST
+100007,Dairy item 100007,05 - Dairy,05 - Dairy subgroup 5,2029,VCO
+100007,Dairy item 100007,05 - Dairy,05 - Dairy subgroup 5,2030,VCO
+100007,Dairy item 100007,05 - Dairy,05 - Dairy subgroup 5,2031,SST
+100156,Frozen item 100156,08 - Frozen,05 - Frozen subgroup 5,2027,VCO
+100156,Frozen item 100156,08 - Frozen,05 - Frozen subgroup 5,2028,VCO
+100156,Frozen item 100156,08 - Frozen,05 - Frozen subgroup 5,2029,SST
+100156,Frozen item 100156,08 - Frozen,05 - Frozen subgroup 5,2030,VCO
+100156,Frozen item 100156,08 - Frozen,05 - Frozen subgroup 5,2031,SST
+100059,Beer item 100059,04 - Beer,04 - Beer subgroup 4,2027,VCO
+100059,Beer item 100059,04 - Beer,04 - Beer subgroup 4,2028,VCO
+100059,Beer item 100059,04 - Beer,04 - Beer subgroup 4,2029,VCO
+100059,Beer item 100059,04 - Beer,04 - Beer subgroup 4,2030,SST
+100059,Beer item 100059,04 - Beer,04 - Beer subgroup 4,2031,VCO
+100004,Produce item 100004,06 - Produce,03 - Produce subgroup 3,2027,SST
+100004,Produce item 100004,06 - Produce,03 - Produce subgroup 3,2028,SST
+100004,Produce item 100004,06 - Produce,03 - Produce subgroup 3,2029,SST
+100004,Produce item 100004,06 - Produce,03 - Produce subgroup 3,2030,VCO
+100004,Produce item 100004,06 - Produce,03 - Produce subgroup 3,2031,
+100161,Beverage item 100161,11 - Beverage,04 - Beverage subgroup 4,2027,SST
+100161,Beverage item 100161,11 - Beverage,04 - Beverage subgroup 4,2028,SST
+100161,Beverage item 100161,11 - Beverage,04 - Beverage subgroup 4,2029,VCO
+100161,Beverage item 100161,11 - Beverage,04 - Beverage subgroup 4,2030,SST
+100161,Beverage item 100161,11 - Beverage,04 - Beverage subgroup 4,2031,
+100188,Produce item 100188,06 - Produce,05 - Produce subgroup 5,2027,VCO
+100188,Produce item 100188,06 - Produce,05 - Produce subgroup 5,2028,SST
+100188,Produce item 100188,06 - Produce,05 - Produce subgroup 5,2029,SST
+100188,Produce item 100188,06 - Produce,05 - Produce subgroup 5,2030,VCO
+100188,Produce item 100188,06 - Produce,05 - Produce subgroup 5,2031,
+100180,Beer item 100180,04 - Beer,02 - Beer subgroup 2,2027,SST
+100180,Beer item 100180,04 - Beer,02 - Beer subgroup 2,2028,SST
+100180,Beer item 100180,04 - Beer,02 - Beer subgroup 2,2029,VCO
+100180,Beer item 100180,04 - Beer,02 - Beer subgroup 2,2030,VCO
+100180,Beer item 100180,04 - Beer,02 - Beer subgroup 2,2031,VCO
+100063,Confectionery item 100063,10 - Confectionery,04 - Confectionery subgroup 4,2027,VCO
+100063,Confectionery item 100063,10 - Confectionery,04 - Confectionery subgroup 4,2028,
+100063,Confectionery item 100063,10 - Confectionery,04 - Confectionery subgroup 4,2029,SST
+100063,Confectionery item 100063,10 - Confectionery,04 - Confectionery subgroup 4,2030,SST
+100063,Confectionery item 100063,10 - Confectionery,04 - Confectionery subgroup 4,2031,
+100142,Snacks item 100142,07 - Snacks,03 - Snacks subgroup 3,2027,VCO
+100142,Snacks item 100142,07 - Snacks,03 - Snacks subgroup 3,2028,SST
+100142,Snacks item 100142,07 - Snacks,03 - Snacks subgroup 3,2029,VCO
+100142,Snacks item 100142,07 - Snacks,03 - Snacks subgroup 3,2030,SST
+100142,Snacks item 100142,07 - Snacks,03 - Snacks subgroup 3,2031,VCO
+100032,Seafood item 100032,12 - Seafood,01 - Seafood subgroup 1,2027,SST
+100032,Seafood item 100032,12 - Seafood,01 - Seafood subgroup 1,2028,VCO
+100032,Seafood item 100032,12 - Seafood,01 - Seafood subgroup 1,2029,SST
+100032,Seafood item 100032,12 - Seafood,01 - Seafood subgroup 1,2030,SST
+100032,Seafood item 100032,12 - Seafood,01 - Seafood subgroup 1,2031,VCO
+100077,Wine item 100077,03 - Wine,04 - Wine subgroup 4,2027,
+100077,Wine item 100077,03 - Wine,04 - Wine subgroup 4,2028,VCO
+100077,Wine item 100077,03 - Wine,04 - Wine subgroup 4,2029,SST
+100077,Wine item 100077,03 - Wine,04 - Wine subgroup 4,2030,
+100077,Wine item 100077,03 - Wine,04 - Wine subgroup 4,2031,SST
+100169,Produce item 100169,06 - Produce,01 - Produce subgroup 1,2027,VCO
+100169,Produce item 100169,06 - Produce,01 - Produce subgroup 1,2028,
+100169,Produce item 100169,06 - Produce,01 - Produce subgroup 1,2029,SST
+100169,Produce item 100169,06 - Produce,01 - Produce subgroup 1,2030,
+100169,Produce item 100169,06 - Produce,01 - Produce subgroup 1,2031,
+100114,Sparkling wine item 100114,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2027,VCO
+100114,Sparkling wine item 100114,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2028,SST
+100114,Sparkling wine item 100114,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2029,SST
+100114,Sparkling wine item 100114,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2030,
+100114,Sparkling wine item 100114,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2031,
+100021,Beer item 100021,04 - Beer,02 - Beer subgroup 2,2027,
+100021,Beer item 100021,04 - Beer,02 - Beer subgroup 2,2028,SST
+100021,Beer item 100021,04 - Beer,02 - Beer subgroup 2,2029,
+100021,Beer item 100021,04 - Beer,02 - Beer subgroup 2,2030,SST
+100021,Beer item 100021,04 - Beer,02 - Beer subgroup 2,2031,VCO
+100128,Confectionery item 100128,10 - Confectionery,03 - Confectionery subgroup 3,2027,VCO
+100128,Confectionery item 100128,10 - Confectionery,03 - Confectionery subgroup 3,2028,VCO
+100128,Confectionery item 100128,10 - Confectionery,03 - Confectionery subgroup 3,2029,
+100128,Confectionery item 100128,10 - Confectionery,03 - Confectionery subgroup 3,2030,VCO
+100128,Confectionery item 100128,10 - Confectionery,03 - Confectionery subgroup 3,2031,
+100052,Bakery item 100052,01 - Bakery,03 - Bakery subgroup 3,2027,VCO
+100052,Bakery item 100052,01 - Bakery,03 - Bakery subgroup 3,2028,SST
+100052,Bakery item 100052,01 - Bakery,03 - Bakery subgroup 3,2029,
+100052,Bakery item 100052,01 - Bakery,03 - Bakery subgroup 3,2030,
+100052,Bakery item 100052,01 - Bakery,03 - Bakery subgroup 3,2031,VCO
+100178,Sparkling wine item 100178,02 - Sparkling wine,02 - Sparkling wine subgroup 2,2027,SST
+100178,Sparkling wine item 100178,02 - Sparkling wine,02 - Sparkling wine subgroup 2,2028,SST
+100178,Sparkling wine item 100178,02 - Sparkling wine,02 - Sparkling wine subgroup 2,2029,SST
+100178,Sparkling wine item 100178,02 - Sparkling wine,02 - Sparkling wine subgroup 2,2030,VCO
+100178,Sparkling wine item 100178,02 - Sparkling wine,02 - Sparkling wine subgroup 2,2031,SST
+100095,Dairy item 100095,05 - Dairy,01 - Dairy subgroup 1,2027,SST
+100095,Dairy item 100095,05 - Dairy,01 - Dairy subgroup 1,2028,
+100095,Dairy item 100095,05 - Dairy,01 - Dairy subgroup 1,2029,SST
+100095,Dairy item 100095,05 - Dairy,01 - Dairy subgroup 1,2030,VCO
+100095,Dairy item 100095,05 - Dairy,01 - Dairy subgroup 1,2031,SST
+100190,Meat item 100190,09 - Meat,05 - Meat subgroup 5,2027,
+100190,Meat item 100190,09 - Meat,05 - Meat subgroup 5,2028,SST
+100190,Meat item 100190,09 - Meat,05 - Meat subgroup 5,2029,
+100190,Meat item 100190,09 - Meat,05 - Meat subgroup 5,2030,
+100190,Meat item 100190,09 - Meat,05 - Meat subgroup 5,2031,
+100062,Sparkling wine item 100062,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2027,
+100062,Sparkling wine item 100062,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2028,
+100062,Sparkling wine item 100062,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2029,SST
+100062,Sparkling wine item 100062,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2030,
+100062,Sparkling wine item 100062,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2031,SST
+100108,Produce item 100108,06 - Produce,04 - Produce subgroup 4,2027,SST
+100108,Produce item 100108,06 - Produce,04 - Produce subgroup 4,2028,
+100108,Produce item 100108,06 - Produce,04 - Produce subgroup 4,2029,SST
+100108,Produce item 100108,06 - Produce,04 - Produce subgroup 4,2030,VCO
+100108,Produce item 100108,06 - Produce,04 - Produce subgroup 4,2031,
+100115,Wine item 100115,03 - Wine,01 - Wine subgroup 1,2027,VCO
+100115,Wine item 100115,03 - Wine,01 - Wine subgroup 1,2028,SST
+100115,Wine item 100115,03 - Wine,01 - Wine subgroup 1,2029,SST
+100115,Wine item 100115,03 - Wine,01 - Wine subgroup 1,2030,SST
+100115,Wine item 100115,03 - Wine,01 - Wine subgroup 1,2031,SST
+100010,Seafood item 100010,12 - Seafood,01 - Seafood subgroup 1,2027,SST
+100010,Seafood item 100010,12 - Seafood,01 - Seafood subgroup 1,2028,SST
+100010,Seafood item 100010,12 - Seafood,01 - Seafood subgroup 1,2029,SST
+100010,Seafood item 100010,12 - Seafood,01 - Seafood subgroup 1,2030,VCO
+100010,Seafood item 100010,12 - Seafood,01 - Seafood subgroup 1,2031,SST
+100000,Beverage item 100000,11 - Beverage,01 - Beverage subgroup 1,2027,SST
+100000,Beverage item 100000,11 - Beverage,01 - Beverage subgroup 1,2028,SST
+100000,Beverage item 100000,11 - Beverage,01 - Beverage subgroup 1,2029,SST
+100000,Beverage item 100000,11 - Beverage,01 - Beverage subgroup 1,2030,SST
+100000,Beverage item 100000,11 - Beverage,01 - Beverage subgroup 1,2031,VCO
+100158,Sparkling wine item 100158,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2027,SST
+100158,Sparkling wine item 100158,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2028,VCO
+100158,Sparkling wine item 100158,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2029,SST
+100158,Sparkling wine item 100158,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2030,SST
+100158,Sparkling wine item 100158,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2031,SST
+100074,Frozen item 100074,08 - Frozen,04 - Frozen subgroup 4,2027,SST
+100074,Frozen item 100074,08 - Frozen,04 - Frozen subgroup 4,2028,VCO
+100074,Frozen item 100074,08 - Frozen,04 - Frozen subgroup 4,2029,VCO
+100074,Frozen item 100074,08 - Frozen,04 - Frozen subgroup 4,2030,SST
+100074,Frozen item 100074,08 - Frozen,04 - Frozen subgroup 4,2031,SST
+100042,Confectionery item 100042,10 - Confectionery,02 - Confectionery subgroup 2,2027,SST
+100042,Confectionery item 100042,10 - Confectionery,02 - Confectionery subgroup 2,2028,SST
+100042,Confectionery item 100042,10 - Confectionery,02 - Confectionery subgroup 2,2029,SST
+100042,Confectionery item 100042,10 - Confectionery,02 - Confectionery subgroup 2,2030,
+100042,Confectionery item 100042,10 - Confectionery,02 - Confectionery subgroup 2,2031,
+100165,Seafood item 100165,12 - Seafood,02 - Seafood subgroup 2,2027,SST
+100165,Seafood item 100165,12 - Seafood,02 - Seafood subgroup 2,2028,
+100165,Seafood item 100165,12 - Seafood,02 - Seafood subgroup 2,2029,VCO
+100165,Seafood item 100165,12 - Seafood,02 - Seafood subgroup 2,2030,
+100165,Seafood item 100165,12 - Seafood,02 - Seafood subgroup 2,2031,VCO
+100153,Wine item 100153,03 - Wine,03 - Wine subgroup 3,2027,VCO
+100153,Wine item 100153,03 - Wine,03 - Wine subgroup 3,2028,VCO
+100153,Wine item 100153,03 - Wine,03 - Wine subgroup 3,2029,
+100153,Wine item 100153,03 - Wine,03 - Wine subgroup 3,2030,VCO
+100153,Wine item 100153,03 - Wine,03 - Wine subgroup 3,2031,
+100119,Dairy item 100119,05 - Dairy,05 - Dairy subgroup 5,2027,
+100119,Dairy item 100119,05 - Dairy,05 - Dairy subgroup 5,2028,SST
+100119,Dairy item 100119,05 - Dairy,05 - Dairy subgroup 5,2029,SST
+100119,Dairy item 100119,05 - Dairy,05 - Dairy subgroup 5,2030,SST
+100119,Dairy item 100119,05 - Dairy,05 - Dairy subgroup 5,2031,VCO
+100117,Wine item 100117,03 - Wine,05 - Wine subgroup 5,2027,
+100117,Wine item 100117,03 - Wine,05 - Wine subgroup 5,2028,
+100117,Wine item 100117,03 - Wine,05 - Wine subgroup 5,2029,VCO
+100117,Wine item 100117,03 - Wine,05 - Wine subgroup 5,2030,
+100117,Wine item 100117,03 - Wine,05 - Wine subgroup 5,2031,
+100170,Produce item 100170,06 - Produce,03 - Produce subgroup 3,2027,SST
+100170,Produce item 100170,06 - Produce,03 - Produce subgroup 3,2028,SST
+100170,Produce item 100170,06 - Produce,03 - Produce subgroup 3,2029,VCO
+100170,Produce item 100170,06 - Produce,03 - Produce subgroup 3,2030,VCO
+100170,Produce item 100170,06 - Produce,03 - Produce subgroup 3,2031,SST
+100034,Dairy item 100034,05 - Dairy,04 - Dairy subgroup 4,2027,SST
+100034,Dairy item 100034,05 - Dairy,04 - Dairy subgroup 4,2028,
+100034,Dairy item 100034,05 - Dairy,04 - Dairy subgroup 4,2029,SST
+100034,Dairy item 100034,05 - Dairy,04 - Dairy subgroup 4,2030,SST
+100034,Dairy item 100034,05 - Dairy,04 - Dairy subgroup 4,2031,VCO
+100184,Sparkling wine item 100184,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2027,
+100184,Sparkling wine item 100184,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2028,
+100184,Sparkling wine item 100184,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2029,
+100184,Sparkling wine item 100184,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2030,SST
+100184,Sparkling wine item 100184,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2031,SST
+100144,Produce item 100144,06 - Produce,03 - Produce subgroup 3,2027,SST
+100144,Produce item 100144,06 - Produce,03 - Produce subgroup 3,2028,SST
+100144,Produce item 100144,06 - Produce,03 - Produce subgroup 3,2029,VCO
+100144,Produce item 100144,06 - Produce,03 - Produce subgroup 3,2030,VCO
+100144,Produce item 100144,06 - Produce,03 - Produce subgroup 3,2031,SST
+100107,Sparkling wine item 100107,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2027,
+100107,Sparkling wine item 100107,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2028,
+100107,Sparkling wine item 100107,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2029,VCO
+100107,Sparkling wine item 100107,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2030,
+100107,Sparkling wine item 100107,02 - Sparkling wine,03 - Sparkling wine subgroup 3,2031,SST
+100087,Wine item 100087,03 - Wine,05 - Wine subgroup 5,2027,
+100087,Wine item 100087,03 - Wine,05 - Wine subgroup 5,2028,VCO
+100087,Wine item 100087,03 - Wine,05 - Wine subgroup 5,2029,
+100087,Wine item 100087,03 - Wine,05 - Wine subgroup 5,2030,SST
+100087,Wine item 100087,03 - Wine,05 - Wine subgroup 5,2031,SST
+100048,Beverage item 100048,11 - Beverage,05 - Beverage subgroup 5,2027,
+100048,Beverage item 100048,11 - Beverage,05 - Beverage subgroup 5,2028,SST
+100048,Beverage item 100048,11 - Beverage,05 - Beverage subgroup 5,2029,SST
+100048,Beverage item 100048,11 - Beverage,05 - Beverage subgroup 5,2030,VCO
+100048,Beverage item 100048,11 - Beverage,05 - Beverage subgroup 5,2031,SST
+100044,Dairy item 100044,05 - Dairy,04 - Dairy subgroup 4,2027,VCO
+100044,Dairy item 100044,05 - Dairy,04 - Dairy subgroup 4,2028,SST
+100044,Dairy item 100044,05 - Dairy,04 - Dairy subgroup 4,2029,
+100044,Dairy item 100044,05 - Dairy,04 - Dairy subgroup 4,2030,SST
+100044,Dairy item 100044,05 - Dairy,04 - Dairy subgroup 4,2031,VCO
+100164,Beverage item 100164,11 - Beverage,01 - Beverage subgroup 1,2027,VCO
+100164,Beverage item 100164,11 - Beverage,01 - Beverage subgroup 1,2028,SST
+100164,Beverage item 100164,11 - Beverage,01 - Beverage subgroup 1,2029,
+100164,Beverage item 100164,11 - Beverage,01 - Beverage subgroup 1,2030,SST
+100164,Beverage item 100164,11 - Beverage,01 - Beverage subgroup 1,2031,VCO
+100080,Frozen item 100080,08 - Frozen,02 - Frozen subgroup 2,2027,VCO
+100080,Frozen item 100080,08 - Frozen,02 - Frozen subgroup 2,2028,SST
+100080,Frozen item 100080,08 - Frozen,02 - Frozen subgroup 2,2029,SST
+100080,Frozen item 100080,08 - Frozen,02 - Frozen subgroup 2,2030,
+100080,Frozen item 100080,08 - Frozen,02 - Frozen subgroup 2,2031,SST
+100027,Beer item 100027,04 - Beer,01 - Beer subgroup 1,2027,SST
+100027,Beer item 100027,04 - Beer,01 - Beer subgroup 1,2028,SST
+100027,Beer item 100027,04 - Beer,01 - Beer subgroup 1,2029,VCO
+100027,Beer item 100027,04 - Beer,01 - Beer subgroup 1,2030,SST
+100027,Beer item 100027,04 - Beer,01 - Beer subgroup 1,2031,
+100139,Beverage item 100139,11 - Beverage,02 - Beverage subgroup 2,2027,
+100139,Beverage item 100139,11 - Beverage,02 - Beverage subgroup 2,2028,VCO
+100139,Beverage item 100139,11 - Beverage,02 - Beverage subgroup 2,2029,SST
+100139,Beverage item 100139,11 - Beverage,02 - Beverage subgroup 2,2030,VCO
+100139,Beverage item 100139,11 - Beverage,02 - Beverage subgroup 2,2031,
+100148,Sparkling wine item 100148,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2027,
+100148,Sparkling wine item 100148,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2028,SST
+100148,Sparkling wine item 100148,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2029,
+100148,Sparkling wine item 100148,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2030,VCO
+100148,Sparkling wine item 100148,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2031,VCO
+100196,Seafood item 100196,12 - Seafood,01 - Seafood subgroup 1,2027,VCO
+100196,Seafood item 100196,12 - Seafood,01 - Seafood subgroup 1,2028,SST
+100196,Seafood item 100196,12 - Seafood,01 - Seafood subgroup 1,2029,
+100196,Seafood item 100196,12 - Seafood,01 - Seafood subgroup 1,2030,
+100196,Seafood item 100196,12 - Seafood,01 - Seafood subgroup 1,2031,VCO
+100137,Beverage item 100137,11 - Beverage,05 - Beverage subgroup 5,2027,SST
+100137,Beverage item 100137,11 - Beverage,05 - Beverage subgroup 5,2028,VCO
+100137,Beverage item 100137,11 - Beverage,05 - Beverage subgroup 5,2029,
+100137,Beverage item 100137,11 - Beverage,05 - Beverage subgroup 5,2030,SST
+100137,Beverage item 100137,11 - Beverage,05 - Beverage subgroup 5,2031,VCO
+100005,Snacks item 100005,07 - Snacks,01 - Snacks subgroup 1,2027,SST
+100005,Snacks item 100005,07 - Snacks,01 - Snacks subgroup 1,2028,VCO
+100005,Snacks item 100005,07 - Snacks,01 - Snacks subgroup 1,2029,
+100005,Snacks item 100005,07 - Snacks,01 - Snacks subgroup 1,2030,SST
+100005,Snacks item 100005,07 - Snacks,01 - Snacks subgroup 1,2031,
+100020,Wine item 100020,03 - Wine,05 - Wine subgroup 5,2027,VCO
+100020,Wine item 100020,03 - Wine,05 - Wine subgroup 5,2028,SST
+100020,Wine item 100020,03 - Wine,05 - Wine subgroup 5,2029,
+100020,Wine item 100020,03 - Wine,05 - Wine subgroup 5,2030,
+100020,Wine item 100020,03 - Wine,05 - Wine subgroup 5,2031,
+100094,Frozen item 100094,08 - Frozen,03 - Frozen subgroup 3,2027,SST
+100094,Frozen item 100094,08 - Frozen,03 - Frozen subgroup 3,2028,SST
+100094,Frozen item 100094,08 - Frozen,03 - Frozen subgroup 3,2029,SST
+100094,Frozen item 100094,08 - Frozen,03 - Frozen subgroup 3,2030,
+100094,Frozen item 100094,08 - Frozen,03 - Frozen subgroup 3,2031,SST
+100149,Sparkling wine item 100149,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2027,SST
+100149,Sparkling wine item 100149,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2028,
+100149,Sparkling wine item 100149,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2029,VCO
+100149,Sparkling wine item 100149,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2030,
+100149,Sparkling wine item 100149,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2031,VCO
+100072,Dairy item 100072,05 - Dairy,05 - Dairy subgroup 5,2027,VCO
+100072,Dairy item 100072,05 - Dairy,05 - Dairy subgroup 5,2028,
+100072,Dairy item 100072,05 - Dairy,05 - Dairy subgroup 5,2029,
+100072,Dairy item 100072,05 - Dairy,05 - Dairy subgroup 5,2030,
+100072,Dairy item 100072,05 - Dairy,05 - Dairy subgroup 5,2031,VCO
+100008,Beverage item 100008,11 - Beverage,02 - Beverage subgroup 2,2027,SST
+100008,Beverage item 100008,11 - Beverage,02 - Beverage subgroup 2,2028,
+100008,Beverage item 100008,11 - Beverage,02 - Beverage subgroup 2,2029,SST
+100008,Beverage item 100008,11 - Beverage,02 - Beverage subgroup 2,2030,VCO
+100008,Beverage item 100008,11 - Beverage,02 - Beverage subgroup 2,2031,VCO
+100038,Seafood item 100038,12 - Seafood,05 - Seafood subgroup 5,2027,SST
+100038,Seafood item 100038,12 - Seafood,05 - Seafood subgroup 5,2028,SST
+100038,Seafood item 100038,12 - Seafood,05 - Seafood subgroup 5,2029,SST
+100038,Seafood item 100038,12 - Seafood,05 - Seafood subgroup 5,2030,VCO
+100038,Seafood item 100038,12 - Seafood,05 - Seafood subgroup 5,2031,
+100011,Snacks item 100011,07 - Snacks,03 - Snacks subgroup 3,2027,
+100011,Snacks item 100011,07 - Snacks,03 - Snacks subgroup 3,2028,SST
+100011,Snacks item 100011,07 - Snacks,03 - Snacks subgroup 3,2029,SST
+100011,Snacks item 100011,07 - Snacks,03 - Snacks subgroup 3,2030,SST
+100011,Snacks item 100011,07 - Snacks,03 - Snacks subgroup 3,2031,SST
+100050,Dairy item 100050,05 - Dairy,03 - Dairy subgroup 3,2027,SST
+100050,Dairy item 100050,05 - Dairy,03 - Dairy subgroup 3,2028,
+100050,Dairy item 100050,05 - Dairy,03 - Dairy subgroup 3,2029,
+100050,Dairy item 100050,05 - Dairy,03 - Dairy subgroup 3,2030,VCO
+100050,Dairy item 100050,05 - Dairy,03 - Dairy subgroup 3,2031,SST
+100089,Bakery item 100089,01 - Bakery,03 - Bakery subgroup 3,2027,VCO
+100089,Bakery item 100089,01 - Bakery,03 - Bakery subgroup 3,2028,SST
+100089,Bakery item 100089,01 - Bakery,03 - Bakery subgroup 3,2029,
+100089,Bakery item 100089,01 - Bakery,03 - Bakery subgroup 3,2030,SST
+100089,Bakery item 100089,01 - Bakery,03 - Bakery subgroup 3,2031,SST
+100160,Snacks item 100160,07 - Snacks,05 - Snacks subgroup 5,2027,
+100160,Snacks item 100160,07 - Snacks,05 - Snacks subgroup 5,2028,
+100160,Snacks item 100160,07 - Snacks,05 - Snacks subgroup 5,2029,SST
+100160,Snacks item 100160,07 - Snacks,05 - Snacks subgroup 5,2030,
+100160,Snacks item 100160,07 - Snacks,05 - Snacks subgroup 5,2031,VCO
+100017,Sparkling wine item 100017,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2027,
+100017,Sparkling wine item 100017,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2028,SST
+100017,Sparkling wine item 100017,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2029,SST
+100017,Sparkling wine item 100017,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2030,SST
+100017,Sparkling wine item 100017,02 - Sparkling wine,04 - Sparkling wine subgroup 4,2031,SST
+100092,Beverage item 100092,11 - Beverage,01 - Beverage subgroup 1,2027,VCO
+100092,Beverage item 100092,11 - Beverage,01 - Beverage subgroup 1,2028,SST
+100092,Beverage item 100092,11 - Beverage,01 - Beverage subgroup 1,2029,
+100092,Beverage item 100092,11 - Beverage,01 - Beverage subgroup 1,2030,
+100092,Beverage item 100092,11 - Beverage,01 - Beverage subgroup 1,2031,
+100071,Frozen item 100071,08 - Frozen,02 - Frozen subgroup 2,2027,SST
+100071,Frozen item 100071,08 - Frozen,02 - Frozen subgroup 2,2028,SST
+100071,Frozen item 100071,08 - Frozen,02 - Frozen subgroup 2,2029,VCO
+100071,Frozen item 100071,08 - Frozen,02 - Frozen subgroup 2,2030,
+100071,Frozen item 100071,08 - Frozen,02 - Frozen subgroup 2,2031,VCO
+100035,Sparkling wine item 100035,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2027,
+100035,Sparkling wine item 100035,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2028,SST
+100035,Sparkling wine item 100035,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2029,VCO
+100035,Sparkling wine item 100035,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2030,VCO
+100035,Sparkling wine item 100035,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2031,SST
+100055,Bakery item 100055,01 - Bakery,03 - Bakery subgroup 3,2027,SST
+100055,Bakery item 100055,01 - Bakery,03 - Bakery subgroup 3,2028,VCO
+100055,Bakery item 100055,01 - Bakery,03 - Bakery subgroup 3,2029,SST
+100055,Bakery item 100055,01 - Bakery,03 - Bakery subgroup 3,2030,SST
+100055,Bakery item 100055,01 - Bakery,03 - Bakery subgroup 3,2031,
+100026,Snacks item 100026,07 - Snacks,03 - Snacks subgroup 3,2027,VCO
+100026,Snacks item 100026,07 - Snacks,03 - Snacks subgroup 3,2028,SST
+100026,Snacks item 100026,07 - Snacks,03 - Snacks subgroup 3,2029,SST
+100026,Snacks item 100026,07 - Snacks,03 - Snacks subgroup 3,2030,SST
+100026,Snacks item 100026,07 - Snacks,03 - Snacks subgroup 3,2031,VCO
+100193,Beverage item 100193,11 - Beverage,03 - Beverage subgroup 3,2027,
+100193,Beverage item 100193,11 - Beverage,03 - Beverage subgroup 3,2028,SST
+100193,Beverage item 100193,11 - Beverage,03 - Beverage subgroup 3,2029,VCO
+100193,Beverage item 100193,11 - Beverage,03 - Beverage subgroup 3,2030,VCO
+100193,Beverage item 100193,11 - Beverage,03 - Beverage subgroup 3,2031,SST
+100064,Meat item 100064,09 - Meat,01 - Meat subgroup 1,2027,VCO
+100064,Meat item 100064,09 - Meat,01 - Meat subgroup 1,2028,
+100064,Meat item 100064,09 - Meat,01 - Meat subgroup 1,2029,SST
+100064,Meat item 100064,09 - Meat,01 - Meat subgroup 1,2030,SST
+100064,Meat item 100064,09 - Meat,01 - Meat subgroup 1,2031,
+100040,Frozen item 100040,08 - Frozen,05 - Frozen subgroup 5,2027,SST
+100040,Frozen item 100040,08 - Frozen,05 - Frozen subgroup 5,2028,
+100040,Frozen item 100040,08 - Frozen,05 - Frozen subgroup 5,2029,SST
+100040,Frozen item 100040,08 - Frozen,05 - Frozen subgroup 5,2030,SST
+100040,Frozen item 100040,08 - Frozen,05 - Frozen subgroup 5,2031,SST
+100154,Produce item 100154,06 - Produce,04 - Produce subgroup 4,2027,
+100154,Produce item 100154,06 - Produce,04 - Produce subgroup 4,2028,VCO
+100154,Produce item 100154,06 - Produce,04 - Produce subgroup 4,2029,VCO
+100154,Produce item 100154,06 - Produce,04 - Produce subgroup 4,2030,SST
+100154,Produce item 100154,06 - Produce,04 - Produce subgroup 4,2031,VCO
+100135,Confectionery item 100135,10 - Confectionery,04 - Confectionery subgroup 4,2027,VCO
+100135,Confectionery item 100135,10 - Confectionery,04 - Confectionery subgroup 4,2028,SST
+100135,Confectionery item 100135,10 - Confectionery,04 - Confectionery subgroup 4,2029,SST
+100135,Confectionery item 100135,10 - Confectionery,04 - Confectionery subgroup 4,2030,
+100135,Confectionery item 100135,10 - Confectionery,04 - Confectionery subgroup 4,2031,SST
+100159,Frozen item 100159,08 - Frozen,03 - Frozen subgroup 3,2027,SST
+100159,Frozen item 100159,08 - Frozen,03 - Frozen subgroup 3,2028,SST
+100159,Frozen item 100159,08 - Frozen,03 - Frozen subgroup 3,2029,VCO
+100159,Frozen item 100159,08 - Frozen,03 - Frozen subgroup 3,2030,SST
+100159,Frozen item 100159,08 - Frozen,03 - Frozen subgroup 3,2031,VCO
+100033,Beer item 100033,04 - Beer,02 - Beer subgroup 2,2027,SST
+100033,Beer item 100033,04 - Beer,02 - Beer subgroup 2,2028,VCO
+100033,Beer item 100033,04 - Beer,02 - Beer subgroup 2,2029,VCO
+100033,Beer item 100033,04 - Beer,02 - Beer subgroup 2,2030,SST
+100033,Beer item 100033,04 - Beer,02 - Beer subgroup 2,2031,
+100057,Snacks item 100057,07 - Snacks,01 - Snacks subgroup 1,2027,SST
+100057,Snacks item 100057,07 - Snacks,01 - Snacks subgroup 1,2028,SST
+100057,Snacks item 100057,07 - Snacks,01 - Snacks subgroup 1,2029,SST
+100057,Snacks item 100057,07 - Snacks,01 - Snacks subgroup 1,2030,VCO
+100057,Snacks item 100057,07 - Snacks,01 - Snacks subgroup 1,2031,VCO
+100121,Beer item 100121,04 - Beer,02 - Beer subgroup 2,2027,
+100121,Beer item 100121,04 - Beer,02 - Beer subgroup 2,2028,
+100121,Beer item 100121,04 - Beer,02 - Beer subgroup 2,2029,SST
+100121,Beer item 100121,04 - Beer,02 - Beer subgroup 2,2030,VCO
+100121,Beer item 100121,04 - Beer,02 - Beer subgroup 2,2031,VCO
+100031,Sparkling wine item 100031,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2027,SST
+100031,Sparkling wine item 100031,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2028,SST
+100031,Sparkling wine item 100031,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2029,SST
+100031,Sparkling wine item 100031,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2030,VCO
+100031,Sparkling wine item 100031,02 - Sparkling wine,01 - Sparkling wine subgroup 1,2031,SST
+100041,Sparkling wine item 100041,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2027,
+100041,Sparkling wine item 100041,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2028,SST
+100041,Sparkling wine item 100041,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2029,SST
+100041,Sparkling wine item 100041,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2030,
+100041,Sparkling wine item 100041,02 - Sparkling wine,05 - Sparkling wine subgroup 5,2031,VCO
