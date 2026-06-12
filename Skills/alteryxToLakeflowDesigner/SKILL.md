@@ -17,13 +17,24 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 
 ## CRITICAL RULE: Operator Selection Priority
 
+> ### MANDATORY PRE-CHECK — runs BEFORE every operator decision
+> Before writing any `sql` or `python` operator, answer ALL of these:
+> 1. Can a **Transform** express this? (CASE WHEN, CAST, COALESCE, TRIM, UPPER, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, arithmetic, literals) → **USE TRANSFORM. STOP.**
+> 2. Can a **Filter** express this? (boolean row condition) → **USE FILTER. STOP.**
+> 3. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE) → **USE AGGREGATE. STOP.**
+> 4. Can a **Join** express this? (equi-join on key columns) → **USE JOIN. STOP.**
+> 5. Can a **Sort**, **Limit**, **Pivot**, or **Combine** express this? → **USE THE VISUAL OPERATOR. STOP.**
+>
+> Only if ALL five answers are NO may you proceed to `sql` or `python`.
+> If you write `sql` or `python` without answering all five, the operator choice is wrong.
+
 **Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
 
 ### Priority 1: Visual Operators (ALWAYS try first)
 
 | Operator | Use For |
 |----------|---------|
-| **Transform** | Column derivations, CASE WHEN, CAST, COALESCE, TRIM, UPPER, SOUNDEX, REGEXP_EXTRACT, DATEDIFF, literal values, `*` passthrough |
+| **Transform** | Column derivations, CASE WHEN, CAST, COALESCE, TRIM, UPPER, SOUNDEX, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, literal values, `*` passthrough |
 | **Filter** | Row filtering with boolean conditions |
 | **Aggregate** | GROUP BY with SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE |
 | **Join** | Combining tables on key columns |
@@ -47,7 +58,7 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 3. Is the table millions of rows? → **NOT AI** (cost/latency explosion)
 4. Is it genuinely creative/semantic with no deterministic equivalent? → **AI Function** ✅
 
-### Priority 3: SQL (ONLY for these specific patterns)
+### Priority 3: SQL (ONLY after the mandatory pre-check passes, and only for these specific patterns)
 
 - **Window functions**: ROW_NUMBER, RANK, DENSE_RANK, NTILE, LAG, LEAD, SUM/AVG/COUNT OVER(...)
 - **COUNT(DISTINCT col)** — Aggregate operator doesn't support it
@@ -55,6 +66,12 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 - **CTEs** — ONLY when required for SEQUENCE/EXPLODE or self-referencing subqueries
 - **SEQUENCE + EXPLODE** (calendar/date generation)
 - **Subqueries** (SELECT FROM (SELECT ...)) for inline DISTINCT before window
+- **Explode-to-rows tokenization** (for example, `EXPLODE(SPLIT(col, ','))`)
+
+**Do NOT use SQL for:**
+- Fixed-column string splitting — use **Transform** with `SPLIT` + `ELEMENT_AT`
+- Finite mappings / small Find Replace rules — use **Transform** CASE WHEN
+- Inline constant rows or tiny lookup tables — use `python` `spark.createDataFrame(...)` when you truly need rows, or **Transform** CASE WHEN when you only need deterministic mappings
 
 ### Priority 4: Python (ABSOLUTE LAST RESORT — only for)
 
@@ -124,7 +141,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | **Arithmetic** | +, -, *, /, ROUND, ABS, FLOOR, CEIL | `quantity * unit_price * (1 - discount_pct) AS net_amount` |
 | **Conditional** | CASE WHEN (up to ~10+ branches) | `CASE WHEN region = 'X' THEN val ... END AS col` |
 | **Null handling** | COALESCE, NVL, IFNULL | `COALESCE(unit_price, list_price) AS price_final` |
-| **String** | TRIM, UPPER, LOWER, INITCAP, CONCAT, SPLIT, SUBSTRING, LENGTH, REPLACE | `TRIM(INITCAP(name)) AS name` |
+| **String** | TRIM, UPPER, LOWER, INITCAP, CONCAT, SPLIT, ELEMENT_AT, SUBSTRING, LENGTH, REPLACE | `TRIM(INITCAP(name)) AS name`; `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` |
 | **Regex** | REGEXP_EXTRACT, REGEXP_REPLACE | `REGEXP_EXTRACT(email, '@(.+)$', 1) AS domain` |
 | **Phonetic** | SOUNDEX | `SOUNDEX(customer_name) AS name_soundex` |
 | **Date/Time** | TO_TIMESTAMP, TO_DATE, DATEDIFF, DATE_ADD, MONTHS_BETWEEN, YEAR, MONTH, DAYOFWEEK | `DATEDIFF(current_date(), last_date) AS days_ago` |
@@ -226,6 +243,10 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | AI function when output must be deterministic | Transform CASE WHEN |
 | AI function on high-cardinality table (millions of rows) | Run on DISTINCT values once → save → Join |
 | Fewer nodes via consolidation without asking user | Always default to MORE operators; ask before merging |
+| `sql` for Text To Columns into fixed N columns | `transform`: `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` — use `SPLIT` + `ELEMENT_AT` in Transform |
+| `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `transform` CASE WHEN for deterministic mappings |
+| `sql` JOIN to a ≤10-row lookup table for Find Replace | `transform` CASE WHEN — small finite mappings should stay visual |
+| Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 5 visual-operator questions first; only then use `sql` |
 
 
 ---
@@ -255,6 +276,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `python` | Python | `data` (LIST) | `result` | `code: "<PySpark>"` — `inputs["data"][i]`; assign final DataFrame to `result` |
 | `markdown` | Note | (none) | (none) | `md: "<Markdown body>"`; optional `dimensions: {width, height}` |
 | `group` | Group | (visual only) | (visual only) | `config: {}`, `input: []`, plus `position: {x, y}` and `dimensions: {width, height}`. Children are not wired via the YAML; place child operator cells inside the bounding box visually. Verified — imports cleanly and renders as a labeled container. |
+| *(UDO name)* | User-Defined Operator | `data` | `result` | Registered via `.user_defined_operators.yaml`; the YAML `template` field matches the UDO's registered identifier (not a fixed string). Three subtypes: **`uc-udf`** — UC UDF, row-level column transform; **`uc-udtf`** — UC UDTF, multi-row/stateful (ML scoring, clustering); **`python-run-function`** — standalone Python callable, no UC dependency. Config varies by subtype — see [UDO reference](https://learn.microsoft.com/en-us/azure/databricks/designer/user-operators/). |
 
 Anything Alteryx does that doesn't map to one of these uses `python`, `sql`, or `ai_function`. If none of them can express it (UI forms, rendered reports, etc.), mark it **MANUAL** and emit a `markdown` node explaining what the user must do outside the pipeline.
 
@@ -335,6 +357,23 @@ Several Alteryx tools have no traditional SQL equivalent but map naturally to a 
 | `ai_similarity` | Compare two strings and compute the semantic similarity score | Fuzzy Match (beyond `levenshtein` / `soundex`) |
 | `ai_summarize` | Generate a summary of text | Long-form text reduction; report-feeder summaries |
 | `ai_translate` | Translate text to a specified target language | Multi-language normalization before downstream joins |
+
+### When to reach for a User-Defined Operator (UDO)
+
+UDOs are reusable visual operators backed by Unity Catalog functions or standalone Python callables. They appear in the operator palette after being registered via `.user_defined_operators.yaml`. Prefer a UDO over a raw `python` node when:
+
+| Condition | Recommended UDO subtype |
+|---|---|
+| Row-level custom transform already exists (or should exist) as a UC UDF | `uc-udf` |
+| Multi-row / stateful operation: ML scoring, clustering, UDTF-style aggregation | `uc-udtf` |
+| Reusable Python callable with no UC dependency (e.g. external API call, email notification) | `python-run-function` |
+| Same logic appears in multiple pipelines and should be maintained in one place | Any subtype |
+
+**Do NOT use a UDO when:**
+- The operation is expressible with a built-in operator (Transform, SQL, Aggregate, etc.) — built-ins are always preferred.
+- The custom logic is one-off and pipeline-specific — use `python` instead.
+
+**YAML note:** Unlike built-in operators, the `template` field for a UDO is the UDO's own registered identifier string (not a fixed value like `transform` or `sql`). The exact YAML schema depends on the UDO subtype — consult the [UDO YAML reference](https://learn.microsoft.com/en-us/azure/databricks/designer/user-operators/) before emitting a UDO cell.
 
 ---
 
@@ -420,7 +459,8 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | RegEx (Parse) | `transform` | `regexp_extract(col, pattern, n)` per capture group |
 | RegEx (Replace) | `transform` | `regexp_replace(col, pattern, repl)` |
 | RegEx (Tokenize) | `sql` | `explode(split(regexp_extract_all(...)))` |
-| Text To Columns | `sql` | `split` + index, or `explode` for rows |
+| Text To Columns (fixed N columns) | `transform` | `ELEMENT_AT(SPLIT(col, ','), 1) AS part1`, `ELEMENT_AT(SPLIT(col, ','), 2) AS part2` — use Transform when the output is a fixed set of columns |
+| Text To Columns (explode into rows) | `sql` | `EXPLODE(SPLIT(col, ',')) AS part` — SQL required only for row expansion |
 | XML Parse | `python` | `from_xml` (spark-xml) or `pyspark.sql.functions.xpath_*` |
 | JSON Parse | `transform` | `from_json(col, schema)` then expand struct |
 | Free-text → fields (no fixed schema) | `ai_function` | `ai_extract(text, ARRAY('field_a','field_b',...))` returns a struct |
@@ -546,6 +586,20 @@ See Step 11 for full handling.
 | Batch macro | `python` operator iterating with Spark |
 | Iterative macro | **MANUAL** — orchestrate via Lakeflow Job loop |
 | Analytic App | **MANUAL** — Databricks App or Lakeflow Job parameters |
+
+### 2.15 User-Defined Operators (UDO)
+
+UDOs have no direct Alteryx equivalent — they are a VDP-native feature for packaging reusable logic as a first-class visual operator. Consider suggesting a UDO **only when** converting Alteryx tools that contain custom Python logic the user is likely to reuse across multiple pipelines.
+
+| Alteryx Pattern | UDO Subtype | Notes |
+|---|---|---|
+| Python Tool with a row-level formula already registered (or planned) as a UC UDF | `uc-udf` | Maps each input row through the UDF; output is a new column. Prefer over `python` when the function is already in UC. |
+| Python Tool performing ML scoring via an MLflow model | `uc-udtf` | UDTF accepts the full table, applies the model, returns scored rows. Cleaner and more reusable than `python` with `mlflow.pyfunc.load_model`. |
+| Python Tool calling an external API (e.g. Slack, email, enrichment service) | `python-run-function` | Standalone Python callable; no UC required. Keeps pipeline logic consistent without embedding credentials in a raw `python` cell. |
+| Custom Tool (`.yxi`) with a known Python implementation | `uc-udtf` or `python-run-function` | Assess whether the logic generalizes; if yes, register as UDO. If one-off, use a `python` node instead. |
+| R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first. |
+
+**Emit a `markdown` note** adjacent to any UDO cell that explains: the UDO name, the UC catalog path (for `uc-udf` / `uc-udtf`), and any one-time setup the user must perform before running the pipeline.
 
 ---
 
@@ -1205,10 +1259,12 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] All column names are Delta-compatible (no spaces, no special chars)
 - [ ] Type casts handle dirty data (filter or `TRY_CAST`)
 - [ ] SQL operators reference simple display names (no spaces)
-- [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`) — reserve `sql` for multi-granularity UNION ALL or unsupported functions
+- [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`); fixed-column Text To Columns use `transform` with `SPLIT` + `ELEMENT_AT`; reserve `sql` for multi-granularity UNION ALL, row explosion, window functions, or unsupported functions
+- [ ] Mandatory 5-question visual-operator pre-check completed before every `sql` or `python` operator
 - [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
 - [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
 - [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
+- [ ] Reusable custom Python logic assessed for UDO promotion (`uc-udf` / `uc-udtf` / `python-run-function`) — adjacent `markdown` node added if a UDO is used
 - [ ] User was asked before consolidating multiple SQL window nodes into one
 - [ ] Deduplication uses `ROW_NUMBER()` pattern
 - [ ] Joins preserve L / J / R branches required downstream
