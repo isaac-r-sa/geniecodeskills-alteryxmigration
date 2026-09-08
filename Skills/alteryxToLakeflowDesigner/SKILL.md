@@ -1,6 +1,6 @@
 ---
 name: alteryx-to-vdp
-description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into Databricks Lakeflow Designer Visual Data Prep pipelines. Maps the full Alteryx tool palette (In/Out, Preparation, Join, Parse, Transform, Data Investigation, Predictive, Time Series, Spatial, Reporting, Documentation, Developer, Interface, Macros) to the actual VDP operators (Source, Output, AI Function, Aggregate, Combine, Filter, Join, Limit, Pivot, Sort, SQL, Transform, Python, Note, Group), handles all common input/output file formats (CSV, TSV, Excel, JSON, XML, Parquet, Avro, ORC, Delta, SAS, SPSS, R, geospatial, PDF, .yxdb), and always materializes output to a Unity Catalog Delta table. Validates against expected output when provided.
+description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into Databricks Lakeflow Designer Visual Data Prep pipelines. Maps the full Alteryx tool palette (In/Out, Preparation, Join, Parse, Transform, Data Investigation, Predictive, Time Series, Spatial, Reporting, Documentation, Developer, Interface, Macros) to the actual VDP operators (Source, Output, AI Function, Aggregate, Combine, Enter Data, Filter, Join, Limit, Pivot, Prepare, Sort, SQL, Transform, Unique, Visualization, Python, Note, Group), handles all common input/output file formats (CSV, TSV, Excel, JSON, XML, Parquet, Avro, ORC, Delta, SAS, SPSS, R, geospatial, PDF, .yxdb), and always materializes output to a Unity Catalog Delta table. Validates against expected output when provided.
 ---
 
 # Skill: Convert Alteryx Workflow (.yxmd / .yxmc) to Lakeflow Designer Visual Data Prep
@@ -23,10 +23,12 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 > 2. Can a **Filter** express this? (boolean row condition) → **USE FILTER. STOP.**
 > 3. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE) → **USE AGGREGATE. STOP.**
 > 4. Can a **Join** express this? (equi-join on key columns) → **USE JOIN. STOP.**
-> 5. Can a **Sort**, **Limit**, **Pivot**, or **Combine** express this? → **USE THE VISUAL OPERATOR. STOP.**
+> 5. Can a **Sort**, **Limit**, **Pivot**, **Combine**, or **Unique** express this? → **USE THE VISUAL OPERATOR. STOP.**
+> 6. Can a **Prepare** action express this? (trim, cast, text_case, fill_null, replace_value, regex_replace, extract, parse_date, formula) → **USE PREPARE. STOP.**
+> 7. Can an **Enter Data** express this? (small inline/lookup table) → **USE ENTER_DATA. STOP.**
 >
-> Only if ALL five answers are NO may you proceed to `sql` or `python`.
-> If you write `sql` or `python` without answering all five, the operator choice is wrong.
+> Only if ALL seven answers are NO may you proceed to `sql` or `python`.
+> If you write `sql` or `python` without answering all seven, the operator choice is wrong.
 
 **Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
 
@@ -42,6 +44,10 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 | **Limit** | TOP N rows |
 | **Pivot/Unpivot** | Reshape wide↔tall |
 | **Combine** | UNION, INTERSECT, EXCEPT |
+| **Unique** | Deduplicate rows (full-row or by column subset, with optional sort to control which row is kept) |
+| **Prepare** | Ordered action list: formula, cast, replace_value, fill_null, text_case, trim, regex_replace, extract, parse_date |
+| **Enter Data** | Inline lookup/constant tables (markdown-style table input) — replaces `spark.createDataFrame` for small static data |
+| **Visualization** | Inline charts (bar, line, scatter, pie, histogram, box, heatmap, etc.) — replaces MANUAL→Lakeview for exploratory charts |
 
 ### Priority 2: AI Functions (ONLY when ALL 3 conditions are met)
 
@@ -159,7 +165,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Running totals | `SUM(col) OVER (... ROWS UNBOUNDED PRECEDING)` |
 | Deduplication | `ROW_NUMBER() OVER (PARTITION BY key ...) WHERE rn = 1` |
 | NTILE / ranking | `NTILE(10) OVER (ORDER BY ...)` |
-| COUNT DISTINCT in aggregation | `COUNT(DISTINCT col)` — Aggregate operator only supports COUNT (no DISTINCT) |
+| ~~COUNT DISTINCT~~ | Now supported by visual **Aggregate** operator as `COUNT_DISTINCT` — no SQL needed |
 | Subqueries / CTEs | Multi-step logic referencing intermediate results |
 | QUALIFY | Row-level filter on window results |
 | LAG / LEAD | `LAG(col) OVER (PARTITION BY ... ORDER BY ...)` |
@@ -167,23 +173,26 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 
 ### Aggregate Operator — Capabilities & Limitations
 
-**✅ Supported:** SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE
+**✅ Supported:** SUM, AVG, COUNT, COUNT_DISTINCT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE, FIRST, LAST, CONCAT
 
 **✅ Workarounds:**
 | Need | Workaround |
 |------|-----------|
-| FIRST(col) | Use MIN(col) — acceptable when group implies single logical value |
-| LAST(col) | Use MAX(col) — same caveat |
+| FIRST(col) | Use Aggregate FIRST — now natively supported (non-deterministic without upstream Sort) |
+| LAST(col) | Use Aggregate LAST — now natively supported (non-deterministic without upstream Sort) |
+| CONCAT(col) | Use Aggregate CONCAT — concatenates values with configurable separator (default ", ") |
 
-**❌ Must use SQL:** COUNT(DISTINCT col), COLLECT_LIST/SET, FIRST_VALUE/LAST_VALUE, any window function
+**❌ Must use SQL:** COLLECT_LIST/SET (as arrays), FIRST_VALUE/LAST_VALUE with window frame, any window function
 
 ### When to use Aggregate vs SQL for GROUP BY
 
 | Pattern | Use |
 |---|---|
 | GROUP BY + SUM/AVG/COUNT/MIN/MAX/MEDIAN/STDDEV | **Aggregate operator** — always preferred |
-| GROUP BY + COUNT DISTINCT | Must use **SQL** — Aggregate COUNT does not deduplicate |
-| GROUP BY + FIRST/LAST/COLLECT_LIST | Must use **SQL** — not supported by Aggregate |
+| GROUP BY + COUNT DISTINCT | **Aggregate operator** — use `COUNT_DISTINCT` fn (now natively supported) |
+| GROUP BY + FIRST/LAST | **Aggregate operator** — use `FIRST` / `LAST` fn (now natively supported; non-deterministic without upstream Sort) |
+| GROUP BY + CONCAT (string agg) | **Aggregate operator** — use `CONCAT` fn with optional separator |
+| GROUP BY + COLLECT_LIST/SET (array) | Must use **SQL** — returns arrays, not supported by Aggregate |
 
 ---
 
@@ -247,6 +256,13 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `transform` CASE WHEN for deterministic mappings |
 | `sql` JOIN to a ≤10-row lookup table for Find Replace | `transform` CASE WHEN — small finite mappings should stay visual |
 | Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 5 visual-operator questions first; only then use `sql` |
+| `sql` ROW_NUMBER for simple deduplication | Use visual `unique` operator — `unique_by_all_columns: false` + `columns` + optional `sort_expressions` |
+| `python` `spark.createDataFrame(...)` for small inline/lookup tables | Use visual `enter_data` operator with markdown-style table syntax |
+| `sql` COUNT(DISTINCT col) in GROUP BY | Use visual `aggregate` with `fn: COUNT_DISTINCT` — now natively supported |
+| `sql` FIRST_VALUE / LAST_VALUE in GROUP BY | Use visual `aggregate` with `fn: FIRST` or `fn: LAST` — now natively supported |
+| Two `filter` operators with inverse conditions for Alteryx T/F split | Use ONE `filter` with two output ports: `filtered_data` (T) and `excluded_data` (F) |
+| `sql` LEFT ANTI / RIGHT ANTI for Alteryx Join L/R unmatched | Use `join` with `join_type: split_join` — produces `joined_data`, `left_unmatched`, `right_unmatched` |
+| `python` for file output to Volume | Use `output` with `output_type: file` + `volume` + `file_name` + `file_type` (csv/json/excel) |
 
 
 ---
@@ -276,6 +292,10 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `python` | Python | `data` (LIST) | `result` | `code: "<PySpark>"` — `inputs["data"][i]`; assign final DataFrame to `result` |
 | `markdown` | Note | (none) | (none) | `md: "<Markdown body>"`; optional `dimensions: {width, height}` |
 | `group` | Group | (visual only) | (visual only) | `config: {}`, `input: []`, plus `position: {x, y}` and `dimensions: {width, height}`. Children are not wired via the YAML; place child operator cells inside the bounding box visually. Verified — imports cleanly and renders as a labeled container. |
+| `prepare` | Prepare | `data` | `prepared_data` | `actions: [{type, column, ...}, ...]` — ordered list of typed actions: `formula` (arbitrary SQL expr), `cast` (type change), `replace_value` (value substitution), `fill_null`, `text_case` (lower/upper/title), `trim`, `regex_replace`, `extract` (regex capture), `parse_date`. Each action mutates in sequence. |
+| `unique` | Unique | `data` | `unique_data` | `unique_by_all_columns: true` (full-row dedup) or `false` + `columns: [key_cols]` (subset dedup). Optional `sort_expressions` to control which row survives. |
+| `enter_data` | Enter Data | (none) | `data` | `data: "| col1 | col2 |\n| --- | --- |\n| val1 | val2 |"` — markdown-style inline table. Use for small lookup/constant tables. |
+| `visualization` | Visualization | `data` | `data` | `editorSpec: {type, xAxis, yAxis, ...}` — inline chart. Types: bar, line, area, scatter, pie, table, histogram, box, heatmap, combo, counter, funnel, etc. Aggregates internally — do NOT add a separate aggregate upstream. |
 | *(UDO name)* | User-Defined Operator | `data` | `result` | Registered via `.user_defined_operators.yaml`; the YAML `template` field matches the UDO's registered identifier (not a fixed string). Three subtypes: **`uc-udf`** — UC UDF, row-level column transform; **`uc-udtf`** — UC UDTF, multi-row/stateful (ML scoring, clustering); **`python-run-function`** — standalone Python callable, no UC dependency. Config varies by subtype — see [UDO reference](https://learn.microsoft.com/en-us/azure/databricks/designer/user-operators/). |
 
 Anything Alteryx does that doesn't map to one of these uses `python`, `sql`, or `ai_function`. If none of them can express it (UI forms, rendered reports, etc.), mark it **MANUAL** and emit a `markdown` node explaining what the user must do outside the pipeline.
@@ -344,7 +364,11 @@ AI functions are appropriate ONLY when:
 
 ✅ **Good AI use:** generating natural-language customer profiles from RFM scores, sentiment analysis on free-text reviews, semantic similarity for fuzzy matching when SOUNDEX is insufficient.
 
-Several Alteryx tools have no traditional SQL equivalent but map naturally to a Databricks AI function. Prefer `ai_function` over a hand-rolled `python` + LLM call. The full set of functions exposed in the operator dropdown:
+Several Alteryx tools have no traditional SQL equivalent but map naturally to a Databricks AI function. Prefer `ai_function` over a hand-rolled `python` + LLM call.
+
+**TVF mode (table-valued functions):** The `ai_function` operator also supports `tvf_sql` for table-valued AI functions like `ai_forecast`. Use `tvf_sql` instead of `expressions` — they are mutually exclusive. Example: `tvf_sql: "SELECT * FROM ai_forecast(observed => TABLE(__lakebuilder_ai_function_input__), horizon => '2099-12-31', time_col => 'date', value_col => 'sales')"`. This replaces `python` Prophet/statsmodels for simple forecasting.
+
+The full set of scalar functions exposed in the operator dropdown:
 
 | Function | Description | Alteryx pattern it replaces |
 |---|---|---|
@@ -405,9 +429,9 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Input Data (file) | `source` (file_source) | UC Volume path; `format` from extension |
 | Input Data (DB / ODBC / OLEDB) | `source` (table_source) or `python` (JDBC) | Use UC Connections / Lakehouse Federation when possible |
 | Output Data (table) | `output` | catalog + schema + table_name |
-| Output Data (file) | `python` after `output` | Write to a UC Volume (see Step 9b) |
+| Output Data (file) | `output` (file mode) | `output_type: file` with `volume`, `file_name`, `file_type` (csv, json, excel). No Python needed. Fall back to `python` only for formats not supported by the output operator. |
 | Browse | *omit* | Browse is just a preview tile — no VDP analog needed |
-| Text Input | `python` | `spark.createDataFrame(rows, schema)` |
+| Text Input | `enter_data` | Inline table with markdown-style syntax (header row + separator + data rows). Use `enter_data` for small static lookup/constant tables. Fall back to `python` `spark.createDataFrame` only for programmatic row generation. |
 | Directory | `python` | `os.listdir` over a Volume path; see Step 4 |
 | Date/Time Now | `transform` | `current_timestamp()` / `current_date()` |
 | Map Input | **MANUAL** | Designer-only; replace with a Volume-hosted file |
@@ -420,7 +444,7 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Data Cleansing (whitespace / case / nulls) | `transform` | TRIM, LOWER/UPPER, REPLACE, NULLIF |
 | Data Cleansing (grammar / typos) | `ai_function` | `ai_fix_grammar(text)` |
 | Data Cleansing (PII redaction) | `ai_function` | `ai_mask(text, ARRAY('EMAIL','PHONE','SSN',...))` |
-| Filter | `filter` | `config.condition` is a free-form SQL boolean string (the UI is a visual builder; the export is SQL). Alteryx T/F outputs become two parallel `filter` operators with inverse conditions — Designer's Filter has only one output port (`filtered_data`). |
+| Filter | `filter` | `config.condition` is a free-form SQL boolean string. Designer's Filter now has **two output ports**: `filtered_data` (rows where condition is true) and `excluded_data` (complement). This maps directly to Alteryx's T/F outputs — use ONE filter operator and wire T→`filtered_data`, F→`excluded_data`. No need for two filters with inverse conditions. |
 | Formula | `transform` | One row per output column with a SQL expression |
 | Imputation (simple null fill with constant/other col) | `transform` | `COALESCE(col, fallback_col) AS col` — use Transform when filling from another column or a constant. **Prefer Transform over SQL.** |
 | Imputation (fill with aggregate like median/mean) | `sql` | `COALESCE(col, AVG(col) OVER ())` — use SQL only when the fill value requires a window/aggregate calculation |
@@ -433,13 +457,13 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Select Records | `sql` | Range-based: `WHERE rn BETWEEN a AND b` |
 | Sort | `sort` | One or more `column ASC|DESC` |
 | Tile | `sql` | `NTILE(n) OVER (...)` |
-| Unique | `sql` | `ROW_NUMBER() ... WHERE rn = 1` (see Step 7) |
+| Unique | `unique` | Visual **Unique** operator: `unique_by_all_columns: true` for full-row dedup, or set `false` with `columns: [key_cols]` for subset dedup. Add `sort_expressions` to control which row is kept. Output port: `unique_data`. Only use SQL ROW_NUMBER for complex dedup with multiple window partitions. |
 
 ### 2.3 Join
 
 | Alteryx Tool | VDP Operator | Notes |
 |---|---|---|
-| Join | `join` | Designer Join supports Full / Inner / Left / Right only. Alteryx's three outputs (L = unmatched left, J = matched, R = unmatched right) → recreate via a Left join (J + L by null check) and a parallel Right join (R), or use `sql` with `LEFT ANTI`/`RIGHT ANTI`. |
+| Join | `join` | Designer Join now supports `split_join` mode with **three output ports**: `joined_data` (matched), `left_unmatched`, `right_unmatched` — this maps **directly** to Alteryx's L/J/R outputs. Also supports Inner / Left / Right / Full. Use `split_join` as default for Alteryx Join conversions. No need for LEFT ANTI/RIGHT ANTI SQL workarounds. |
 | Join Multiple | chain of `join` | Or one `sql` with multi-table FROM |
 | Append Fields (cross join) | `sql` | Designer Join has no cross-join — emit `SELECT * FROM left CROSS JOIN right`. |
 | Union | `combine` | `operator: UNION`, `quantifier: ALL` (= UNION ALL) or `DISTINCT` (= UNION DISTINCT) |
@@ -473,9 +497,11 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Count Records | `aggregate` | Single `COUNT(*)` aggregation, no group_bys |
 | Cross Tab | `pivot` | **Rows → Columns** mode; pick pivot column + value/aggregation |
 | Running Total | `sql` | `SUM(col) OVER (PARTITION BY ... ORDER BY ...)` |
-| Summarize (Sum/Avg/Count/Min/Max/Median/Stddev/Variance/Percentile) | `aggregate` | **ALWAYS use Aggregate** — map directly to the supported aggregations. Only fall back to `sql` when: (a) COUNT DISTINCT is needed, (b) aggregation involves UNION ALL across granularities, or (c) uses unsupported functions (first/last/collect_list). |
-| Summarize with CountDistinct | `sql` | The Aggregate operator COUNT does NOT deduplicate — use `COUNT(DISTINCT col)` in SQL. This is the ONE case where SQL is required for aggregation. |
-| Summarize (First / Last / Concat) | `sql` | Designer's Aggregate does NOT expose first/last/collect_list — use `FIRST_VALUE`, `LAST_VALUE`, or `concat_ws(',', collect_list(col))` |
+| Summarize (Sum/Avg/Count/CountDistinct/Min/Max/Median/Stddev/Variance/Percentile/First/Last/Concat) | `aggregate` | **ALWAYS use Aggregate** — all these functions are natively supported. Only fall back to `sql` when: (a) aggregation involves UNION ALL across multiple granularities, (b) uses COLLECT_LIST/SET (array output), or (c) needs window functions. |
+| Summarize with CountDistinct | `aggregate` | Use `COUNT_DISTINCT` fn — now natively supported by the visual Aggregate operator. No SQL needed. |
+| Summarize (First / Last) | `aggregate` | Use `FIRST` / `LAST` fn — now natively supported. Non-deterministic without upstream Sort. |
+| Summarize (Concat / string agg) | `aggregate` | Use `CONCAT` fn with optional separator — now natively supported. |
+| Summarize (Collect List/Set as array) | `sql` | COLLECT_LIST / COLLECT_SET returns arrays — still requires SQL. |
 | Transpose | `pivot` | **Columns → Rows** mode |
 | Weighted Average | `sql` | `SUM(value*weight) / SUM(weight)` per group |
 
@@ -488,8 +514,9 @@ These are exploratory; in VDP they're typically intermediate `aggregate`/`sql` n
 | Field Summary | `sql` | `describe`-style query: count/mean/stddev/min/max per column |
 | Frequency Table | `aggregate` | GROUP BY col, COUNT(*) |
 | Pearson / Spearman Correlation | `python` | `df.stat.corr(...)` per pair, or `Correlation.corr` (MLlib) |
-| Histogram | `sql` | `WIDTH_BUCKET` or manual binning |
-| Scatterplot / Distribution / Association | **MANUAL → Lakeview** | Build a Lakeview (AI/BI) dashboard chart on the Delta output instead |
+| Histogram | `visualization` | `type: histogram` — visual Visualization operator handles binning internally. Fall back to `sql` `WIDTH_BUCKET` only for custom bin boundaries. |
+| Scatterplot / Distribution / Association | `visualization` | Use the visual **Visualization** operator for inline charts (bar, line, scatter, pie, histogram, box, heatmap, etc.). The operator aggregates internally — no separate aggregate needed. For production dashboards, also consider Lakeview (AI/BI). |
+| Histogram | `visualization` | `type: histogram` with `xAxis` (numeric column) + `yAxis` (`COUNT(*)`) — replaces SQL WIDTH_BUCKET binning |
 
 ### 2.7 Predictive
 
@@ -513,7 +540,7 @@ Predictive tools have no native VDP operator. Emit a `python` operator with the 
 |---|---|---|
 | TS Filler | `sql` | `sequence(min(ts), max(ts), interval)` + LEFT JOIN |
 | TS Plot | **MANUAL → Lakeview** | Build a line chart on the materialized table |
-| ARIMA / ETS / TS Forecast | `python` | `statsmodels` / `prophet` / `pyspark.ml`; log to MLflow |
+| ARIMA / ETS / TS Forecast | `ai_function` (TVF) or `python` | **Preferred**: `ai_function` with `tvf_sql` calling `ai_forecast(...)` for simple forecasting. Fall back to `python` (`statsmodels` / `prophet`) for custom ARIMA/ETS models; log to MLflow |
 | TS Compare | `python` | Compute MAPE/RMSE per model; emit comparison table |
 
 ### 2.9 Spatial
@@ -888,29 +915,33 @@ Excel/CSV sources may contain error values like `#`, `#N/A`, `#VALUE!`, `#REF!`.
 
 ## Step 8: Deduplication Pattern (Alteryx Unique)
 
-The `sql` operator registers each upstream DataFrame as a temp view named after the upstream operator's `name` field. Reference it directly in the `FROM` clause:
+**Preferred: Use the visual `unique` operator** — it handles deduplication without SQL.
 
 ```yaml
 - id: deduplicate
-  template: sql
+  template: unique
   name: deduplicate
   config:
-    query: |
-      SELECT * EXCEPT (_dedup_rn)
-      FROM (
-        SELECT
-          *,
-          ROW_NUMBER() OVER (PARTITION BY unique_id ORDER BY unique_id) AS _dedup_rn
-        FROM add_validation
-      )
-      WHERE _dedup_rn = 1
+    unique_by_all_columns: false
+    columns:
+      - unique_id
+    sort_expressions:
+      - columnExpr:
+          expr: updated_at
+        sortBy: DESC
   input:
     - node: add_validation
       input_port: data
       output_port: transformed_data
 ```
 
-The runtime auto-builds `inputs["data__sources"]` for each upstream so the temp view name matches the upstream operator's `name`. The SQL operator also supports `:param_name` widget bindings — define widgets in the pipeline parameters panel and reference them as `:param_name` in the query.
+**Config options:**
+- `unique_by_all_columns: true` — full-row dedup (drop exact duplicate rows across all columns)
+- `unique_by_all_columns: false` + `columns: [key_cols]` — dedup by a column subset
+- `sort_expressions` — within each duplicate group, keep the row that sorts first (e.g. most recent `updated_at`)
+- Output port: `unique_data`
+
+**Only use SQL ROW_NUMBER when:** the dedup requires multiple different partitions in the same step, or complex window logic that the visual operator cannot express.
 
 ---
 
@@ -940,7 +971,26 @@ Every converted workflow MUST end with an `output` operator:
 
 ### 9b. Additional non-Delta outputs (optional, downstream of 9a)
 
-When the original Alteryx workflow writes a CSV/Parquet/JSON file, add a `python` operator **after** the Delta `output`:
+**Preferred: Use `output` with `output_type: file`** for CSV/JSON/Excel file output:
+
+```yaml
+- id: write_csv_to_volume
+  template: output
+  name: write_csv_to_volume
+  config:
+    output_type: file
+    catalog: cat
+    schema: exports
+    volume: orders_csv
+    file_name: orders.csv
+    file_type: csv
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <last_operator_output_port>
+```
+
+Fall back to `python` only for formats not supported by the output operator (e.g. Parquet with custom options). When the original Alteryx workflow requires Python file writes:
 
 ```yaml
 - id: write_csv_to_volume
@@ -1157,7 +1207,7 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 | Iterative joins on huge tables | OOM | Use broadcast hint in SQL: `/*+ BROADCAST(small) */` |
 | Designer Filter is graphical, not free-form SQL | Cannot enter `REGEXP_LIKE`, `BETWEEN`, multi-AND-OR mixes directly | Fall back to `sql` operator |
 | Designer Join has no cross-join | Append Fields cannot map to `join` | Use a `sql` operator with `CROSS JOIN` |
-| Aggregate has no first/last/collect_list | Alteryx Summarize → Concat doesn't fit | Use `sql` with `concat_ws(',', collect_list(col))` |
+| Aggregate has no collect_list/set (array output) | Alteryx Summarize → Concat List doesn't fit | Use `sql` with `collect_list(col)` / `collect_set(col)`. Note: FIRST, LAST, CONCAT (string), and COUNT_DISTINCT are now natively supported by the Aggregate operator. |
 | Combine requires matching schemas | Heterogeneous Alteryx Unions fail | Pre-align schemas with two `transform` operators before `combine` |
 | YAML docstring colon in `description.text` breaks the cell | Downstream cells fail with `'<this>.<port>' data is missing or not created before use` because Designer never registers the broken cell in the dataflow graph | **Always quote** any free-text YAML scalar that may contain `:`, `#`, `{`, `}`, `[`, `]`, `,`, or leading/trailing whitespace. Concretely: emit `text: "Per-category metrics: avg / median / sum / count."` (double-quoted) rather than `text: Per-category metrics: avg / median / sum / count.` |
 
@@ -1260,13 +1310,13 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Type casts handle dirty data (filter or `TRY_CAST`)
 - [ ] SQL operators reference simple display names (no spaces)
 - [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`); fixed-column Text To Columns use `transform` with `SPLIT` + `ELEMENT_AT`; reserve `sql` for multi-granularity UNION ALL, row explosion, window functions, or unsupported functions
-- [ ] Mandatory 5-question visual-operator pre-check completed before every `sql` or `python` operator
+- [ ] Mandatory 7-question visual-operator pre-check completed before every `sql` or `python` operator
 - [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
 - [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
 - [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
 - [ ] Reusable custom Python logic assessed for UDO promotion (`uc-udf` / `uc-udtf` / `python-run-function`) — adjacent `markdown` node added if a UDO is used
 - [ ] User was asked before consolidating multiple SQL window nodes into one
-- [ ] Deduplication uses `ROW_NUMBER()` pattern
+- [ ] Deduplication uses visual `unique` operator (not SQL ROW_NUMBER) — reserve SQL only for multi-partition dedup or complex window logic
 - [ ] Joins preserve L / J / R branches required downstream
 - [ ] Macros — standard inlined or extracted; iterative flagged for Job
 - [ ] Predictive / spatial / time-series — Python operator emitted, MLflow noted, marked **REVIEW**
@@ -1285,3 +1335,4 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Pipeline tested end-to-end
 - [ ] Layout is clean and readable (horizontal flow, no overlaps)
 - [ ] Top-level `markdown` documents pipeline purpose and any MANUAL items
+
