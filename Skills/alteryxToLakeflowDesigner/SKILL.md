@@ -263,6 +263,11 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Two `filter` operators with inverse conditions for Alteryx T/F split | Use ONE `filter` with two output ports: `filtered_data` (T) and `excluded_data` (F) |
 | `sql` LEFT ANTI / RIGHT ANTI for Alteryx Join L/R unmatched | Use `join` with `join_type: split_join` — produces `joined_data`, `left_unmatched`, `right_unmatched` |
 | `python` for file output to Volume | Use `output` with `output_type: file` + `volume` + `file_name` + `file_type` (csv/json/excel) |
+| `enter_data` for lookup tables when preview crashes with `'DataFrame' object has no attribute 'map'` | The built-in `enter_data` template uses `pdf.map()` which requires pandas ≥ 2.1.0. **Fallback**: replace with a `python` operator using `spark.createDataFrame(data, schema)`. Update downstream wiring from `output_port: data` → `output_port: result`. |
+| Join@1.0.0 with `expressions: []` (empty) | Always set explicit join expressions: `["left.*", "right.needed_col"]` — empty expressions pass ALL columns from both sides, duplicating the join key and causing `DLTAnalysisException: duplicate column name` downstream |
+| Treating output v4.0.0 preview `TABLE_OR_VIEW_NOT_FOUND` as a bug | The v4.0.0 output preview only does `SELECT * FROM target` — it does NOT write. First-run failure is **expected**. The actual write happens on Run All. Same for file outputs (`CF_PATH_DOES_NOT_EXIST_FOR_READ_FILES`). Do not try to "fix" this. |
+| Passing VARIANT columns to downstream Transform/Join operators | ai_parse_document and ai_extract return VARIANT. Designer preview fails with `UNSUPPORTED_OPERATION` on VARIANT. **Always CAST to STRING/DOUBLE/etc inline** in the same SQL — never let VARIANT flow downstream. |
+| `TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy')` on AI-extracted dates | AI-extracted dates often come in mixed formats (MM/dd/yyyy, yyyy-M-d, dd-MMM-yyyy). Use `COALESCE(TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy'), TRY_TO_TIMESTAMP(col, 'yyyy-M-d'), TRY_TO_TIMESTAMP(col, 'dd-MMM-yyyy'))` in a Transform. |
 
 
 ---
@@ -434,6 +439,11 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Text Input | `enter_data` | Inline table with markdown-style syntax (header row + separator + data rows). Use `enter_data` for small static lookup/constant tables. Fall back to `python` `spark.createDataFrame` only for programmatic row generation. |
 | Directory | `python` | `os.listdir` over a Volume path; see Step 4 |
 | Date/Time Now | `transform` | `current_timestamp()` / `current_date()` |
+| Input Data (.xlsx — full file) | `python` | `pandas.read_excel()` → `spark.createDataFrame()`; see §4 Excel Ingest Patterns |
+| Input Data (.xlsx — specific sheet/range/named range) | `python` | `pandas.read_excel(sheet_name=, usecols=, skiprows=, nrows=, header=)`; see §4 Excel Ingest Patterns |
+| Input Data (.xls legacy) | `python` | `pandas.read_excel(engine='xlrd')`; see §4 Excel Ingest Patterns |
+| Output Data (.xlsx) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns |
+| Input Data (PDF — form/document) | `sql` or `python` | `ai_parse_document()` → `ai_extract()` chain; see §4 PDF Parse Patterns |
 | Map Input | **MANUAL** | Designer-only; replace with a Volume-hosted file |
 
 ### 2.2 Preparation
@@ -488,6 +498,7 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | XML Parse | `python` | `from_xml` (spark-xml) or `pyspark.sql.functions.xpath_*` |
 | JSON Parse | `transform` | `from_json(col, schema)` then expand struct |
 | Free-text → fields (no fixed schema) | `ai_function` | `ai_extract(text, ARRAY('field_a','field_b',...))` returns a struct |
+| PDF form data extraction | `sql` chain | `ai_parse_document(content, MAP('version','2.0'))` → `ai_extract(parsed, schema, MAP('version','2.1'))` — see §4 PDF Parse Patterns |
 
 ### 2.5 Transform
 
@@ -655,7 +666,8 @@ UDOs have no direct Alteryx equivalent — they are a VDP-native feature for pac
 | | GeoJSON | `python` (Sedona) | `ST_GeomFromGeoJSON` |
 | | KML / KMZ | `python` | KMZ → unzip → KML; `geopandas.read_file` |
 | | MapInfo TAB | **MANUAL** | Convert to Shapefile/GeoJSON externally |
-| **Documents** | PDF (tabular) | `python` | `tabula-py` or Databricks AI Functions for table extraction |
+| **Documents** | PDF (form data / structured extraction) | `sql` | `ai_parse_document()` → `ai_extract()` chain (preferred); see §4 PDF Parse Patterns |
+| | PDF (tabular / table extraction) | `python` or `sql` | `ai_parse_document()` for AI-powered extraction (preferred); `tabula-py` as fallback for simple grids |
 | | HTML | `python` | `pandas.read_html` |
 | **Compressed** | `.gz` / `.bz2` | `source` | Spark reads transparently if extension is preserved |
 | | `.zip` | `python` | Unzip to Volume first; then read |
@@ -747,7 +759,24 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 
 > Per the docs, `inputs["data"]` is a **list** of upstream DataFrames in upstream order, and the operator details pane lists their names (e.g. `inputs["data"][0] (customers), inputs["data"][1] (sales)`). Always assign the final DataFrame to `result`.
 
-### Excel via Python (covers .xlsx/.xls/.xlsm/.xlsb)
+### Excel Ingest Patterns (covers .xlsx/.xls/.xlsm/.xlsb)
+
+**Decision tree — pick the first that applies:**
+
+| Scenario | Operator | Method |
+|---|---|---|
+| Full file, single sheet, no range filtering | `python` | `pandas.read_excel(path)` |
+| Specific sheet by name or index | `python` | `pandas.read_excel(path, sheet_name='Sheet2')` or `sheet_name=1` |
+| Specific cell range (e.g. A1:G50) | `python` | `openpyxl` load + slice, then `pd.DataFrame` |
+| Named range / defined name | `python` | `openpyxl` load → `wb.defined_names[name]` → cell range → slice |
+| Skip header rows / footer rows | `python` | `pandas.read_excel(path, skiprows=3, nrows=100)` |
+| Multiple sheets → union | `python` | Loop `sheet_name=[...]` or `sheet_name=None` (all sheets) |
+| Legacy `.xls` | `python` | `pandas.read_excel(path, engine='xlrd')` |
+| `.xlsb` (binary) | `python` | `pandas.read_excel(path, engine='pyxlsb')` |
+| `.xlsm` with macros | `python` | Reads cell values only — VBA macros are NOT executed |
+| Very large Excel (100k+ rows) | `python` | `openpyxl` read_only mode or spark-excel (if available) |
+
+#### Pattern A: Full file / single sheet (most common)
 
 ```yaml
 - id: src_excel
@@ -761,6 +790,453 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
       result = spark.createDataFrame(pdf)
   input: []
 ```
+
+#### Pattern B: Specific cell range (e.g. Alteryx "Data Address" B3:F50)
+
+```yaml
+- id: src_excel_range
+  template: python
+  name: src_excel_range
+  config:
+    code: |
+      import openpyxl, pandas as pd
+      wb = openpyxl.load_workbook("/Volumes/cat/raw/landing/report.xlsx", read_only=True, data_only=True)
+      ws = wb["Summary"]
+      data = [[cell.value for cell in row] for row in ws["B3":"F50"]]
+      header = data[0]
+      rows = data[1:]
+      pdf = pd.DataFrame(rows, columns=header)
+      pdf.columns = [str(c).strip().lower().replace(" ", "_") for c in pdf.columns]
+      result = spark.createDataFrame(pdf)
+  input: []
+```
+
+#### Pattern C: Named range
+
+```yaml
+- id: src_excel_named
+  template: python
+  name: src_excel_named
+  config:
+    code: |
+      import openpyxl, pandas as pd
+      wb = openpyxl.load_workbook("/Volumes/cat/raw/landing/model.xlsx", read_only=False, data_only=True)
+      dest = wb.defined_names["SalesData"]
+      sheet_title, cell_range = next(dest.destinations)
+      ws = wb[sheet_title]
+      data = [[cell.value for cell in row] for row in ws[cell_range]]
+      pdf = pd.DataFrame(data[1:], columns=data[0])
+      pdf.columns = [str(c).strip().lower().replace(" ", "_") for c in pdf.columns]
+      result = spark.createDataFrame(pdf)
+  input: []
+```
+
+#### Pattern D: All sheets unioned
+
+```yaml
+- id: src_excel_all_sheets
+  template: python
+  name: src_excel_all_sheets
+  config:
+    code: |
+      import pandas as pd
+      sheets = pd.read_excel("/Volumes/cat/raw/landing/multi.xlsx", sheet_name=None)
+      frames = []
+      for name, pdf in sheets.items():
+          pdf.columns = [str(c).strip().lower().replace(" ", "_") for c in pdf.columns]
+          pdf["_sheet_name"] = name
+          frames.append(pdf)
+      combined = pd.concat(frames, ignore_index=True)
+      result = spark.createDataFrame(combined)
+  input: []
+```
+
+#### Pattern E: spark-excel (large files, if library available on cluster)
+
+```yaml
+- id: src_excel_spark
+  template: python
+  name: src_excel_spark
+  config:
+    code: |
+      result = (spark.read
+          .format("com.crealytics.spark.excel")
+          .option("header", "true")
+          .option("inferSchema", "true")
+          .option("dataAddress", "'Sheet1'!A1")
+          .load("/Volumes/cat/raw/landing/large_file.xlsx"))
+  input: []
+```
+
+> **Note**: spark-excel is a third-party library (`com.crealytics:spark-excel_2.12`). It must be installed as a cluster library. On serverless compute it is NOT available — use pandas patterns instead.
+
+### Excel Write-back Patterns
+
+**Decision tree:**
+
+| Scenario | Operator | Method |
+|---|---|---|
+| Simple data dump to `.xlsx` | `python` | `toPandas()` → `pandas.to_excel()` |
+| Multiple sheets in one workbook | `python` | `pd.ExcelWriter` context manager |
+| Formatted output (bold headers, number formats, column widths) | `python` | `openpyxl` Workbook + manual styling |
+| Write into an existing template | `python` | `openpyxl.load_workbook(template)` → write cells → save to Volume |
+
+**IMPORTANT**: Always materialize to a Delta table first (Step 9a canonical output), then add the Excel write-back as a secondary sink. The Delta table is the source of truth.
+
+#### Pattern A: Simple data dump
+
+```yaml
+- id: write_excel
+  template: python
+  name: write_excel
+  config:
+    code: |
+      import pandas as pd
+      df = inputs["data"][0]
+      pdf = df.toPandas()
+      pdf.to_excel("/Volumes/cat/exports/output.xlsx", index=False, sheet_name="Results")
+      result = df  # pass-through
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <last_output_port>
+```
+
+#### Pattern B: Multiple sheets
+
+```yaml
+- id: write_excel_multi
+  template: python
+  name: write_excel_multi
+  config:
+    code: |
+      import pandas as pd
+      df_summary = inputs["data"][0].toPandas()
+      df_detail  = inputs["data"][1].toPandas()
+      with pd.ExcelWriter("/Volumes/cat/exports/report.xlsx", engine="openpyxl") as writer:
+          df_summary.to_excel(writer, sheet_name="Summary", index=False)
+          df_detail.to_excel(writer, sheet_name="Detail", index=False)
+      result = inputs["data"][0]  # pass-through
+  input:
+    - node: summary_node
+      input_port: data
+      output_port: <port>
+    - node: detail_node
+      input_port: data
+      output_port: <port>
+```
+
+#### Pattern C: Formatted output (bold headers, column widths, number formats)
+
+```yaml
+- id: write_excel_formatted
+  template: python
+  name: write_excel_formatted
+  config:
+    code: |
+      from openpyxl import Workbook
+      from openpyxl.styles import Font
+      df = inputs["data"][0]
+      pdf = df.toPandas()
+      wb = Workbook()
+      ws = wb.active
+      ws.title = "Report"
+      for col_idx, col_name in enumerate(pdf.columns, 1):
+          cell = ws.cell(row=1, column=col_idx, value=col_name)
+          cell.font = Font(bold=True)
+          ws.column_dimensions[cell.column_letter].width = max(len(str(col_name)) + 4, 12)
+      for row_idx, row in enumerate(pdf.itertuples(index=False), 2):
+          for col_idx, value in enumerate(row, 1):
+              ws.cell(row=row_idx, column=col_idx, value=value)
+      wb.save("/Volumes/cat/exports/formatted_report.xlsx")
+      result = df
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <port>
+```
+
+#### Pattern D: Write into existing Excel template
+
+```yaml
+- id: write_excel_template
+  template: python
+  name: write_excel_template
+  config:
+    code: |
+      from openpyxl import load_workbook
+      import shutil
+      src = "/Volumes/cat/raw/templates/report_template.xlsx"
+      dst = "/Volumes/cat/exports/filled_report.xlsx"
+      shutil.copy2(src, dst)
+      wb = load_workbook(dst)
+      ws = wb["Data"]
+      df = inputs["data"][0]
+      pdf = df.toPandas()
+      for row_idx, row in enumerate(pdf.itertuples(index=False), 2):
+          for col_idx, value in enumerate(row, 1):
+              ws.cell(row=row_idx, column=col_idx, value=value)
+      wb.save(dst)
+      result = df
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <port>
+```
+
+**Limitations of Excel write-back:**
+- **No VBA macro execution**: `.xlsm` templates preserve macros but they won't run in Databricks.
+- **Formatting preservation**: Writing into a template preserves existing formatting in untouched cells.
+- **File size**: `toPandas()` collects all data to the driver. For datasets >1M rows, consider Parquet/CSV output instead.
+- **Charts/pivot tables in templates**: Existing charts remain but won't auto-refresh until opened in Excel.
+
+### PDF Parse Patterns (ai_parse_document → ai_extract)
+
+**When to use**: Any Alteryx workflow that reads PDF form data, extracts invoice fields, processes scanned documents, or parses unstructured PDF content.
+
+**Decision tree:**
+
+| Scenario | Operator | Method |
+|---|---|---|
+| Extract structured fields from PDF forms (invoices, receipts, contracts) | `sql` chain | `ai_parse_document()` → `ai_extract()` with typed schema |
+| Classify document type | `sql` chain | `ai_parse_document()` → `ai_classify()` |
+| Summarize / free-form Q&A over PDF | `sql` chain | `ai_parse_document()` → flatten to text → `ai_query()` |
+| Extract tables from PDF (grid data) | `sql` | `ai_parse_document()` — tables come as HTML in elements |
+| Specific pages only (large PDFs) | `sql` | `ai_parse_document(content, MAP('version','2.0','pageRange','1-3'))` |
+
+> **CRITICAL — ai_extract v2.1 response structure (validated Sep 2026):**
+> `ai_extract` wraps the result in an envelope: `{error_message, metadata: {version: "2.1"}, response: {...}}`.
+> Your extracted fields live under `ex:response:field_name`, **NOT** `ex:field_name`.
+> Each property is further wrapped as `{value: "actual_data"}`, so access is `ex:response:field_name:value`.
+> For array fields, the FROM_JSON schema must use `STRUCT<value:STRING>` for each nested property, and the SELECT must unwrap via `.value`.
+> **Always use snake_case aliases** in the final SELECT — column names with spaces cause `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on Delta writes.
+
+#### Pattern A: Structured form extraction (invoices, receipts, applications)
+
+This is a 3-operator chain: Source (read binary) → SQL (parse + extract) → Transform (flatten VARIANT to columns).
+
+```yaml
+- id: src_pdf_files
+  template: python
+  name: src_pdf_files
+  config:
+    code: |
+      result = spark.read.format("binaryFile").load("/Volumes/cat/raw/landing/invoices/")
+  input: []
+
+- id: parse_and_extract
+  template: sql
+  name: parse_and_extract
+  config:
+    query: |
+      WITH parsed AS (
+        SELECT
+          path,
+          ai_parse_document(content, MAP('version', '2.0')) AS parsed_content
+        FROM src_pdf_files
+      )
+      SELECT
+        path,
+        ai_extract(
+          parsed_content,
+          '{
+            "invoice_id": {"type": "string"},
+            "vendor_name": {"type": "string", "description": "Legal business name"},
+            "invoice_date": {"type": "string", "description": "Date in YYYY-MM-DD format"},
+            "line_items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {"type": "string"},
+                  "quantity": {"type": "integer"},
+                  "unit_price": {"type": "number"}
+                }
+              }
+            },
+            "total_amount": {"type": "number"}
+          }',
+          MAP('version', '2.1', 'instructions', 'Extract all invoice fields and line items.')
+        ) AS extracted
+      FROM parsed
+      WHERE is_variant_null(parsed_content:error_status)
+  input:
+    - node: src_pdf_files
+      input_port: data
+      output_port: result
+
+- id: flatten_extracted
+  template: transform
+  name: flatten_extracted
+  config:
+    expressions:
+      - "path"
+      - "CAST(extracted:response:invoice_id:value AS STRING) AS invoice_id"
+      - "CAST(extracted:response:vendor_name:value AS STRING) AS vendor_name"
+      - "CAST(extracted:response:invoice_date:value AS DATE) AS invoice_date"
+      - "CAST(extracted:response:total_amount:value AS DOUBLE) AS total_amount"
+  input:
+    - node: parse_and_extract
+      input_port: data
+      output_port: result
+```
+
+#### Pattern B: Explode line items from PDF (array fields)
+
+```yaml
+- id: explode_line_items
+  template: sql
+  name: explode_line_items
+  config:
+    query: |
+      SELECT
+        path,
+        CAST(extracted:response:invoice_id:value AS STRING) AS invoice_id,
+        li.description.value AS description,
+        CAST(li.quantity.value AS INT) AS quantity,
+        CAST(li.unit_price.value AS DOUBLE) AS unit_price,
+        CAST(li.quantity.value AS INT) * CAST(li.unit_price.value AS DOUBLE) AS line_total
+      FROM parse_and_extract
+      LATERAL VIEW EXPLODE(
+        FROM_JSON(
+          CAST(extracted:response:line_items AS STRING),
+          'ARRAY<STRUCT<description:STRUCT<value:STRING>, quantity:STRUCT<value:STRING>, unit_price:STRUCT<value:STRING>>>'
+        )
+      ) AS li
+  input:
+    - node: parse_and_extract
+      input_port: data
+      output_port: result
+```
+
+#### Pattern C: Document classification
+
+```yaml
+- id: classify_documents
+  template: sql
+  name: classify_documents
+  config:
+    query: |
+      WITH parsed AS (
+        SELECT
+          path,
+          ai_parse_document(content, MAP('version', '2.0')) AS parsed_content
+        FROM src_pdf_files
+      )
+      SELECT
+        path,
+        ai_classify(
+          parsed_content,
+          '{"invoice": "Billing document with line items",
+           "contract": "Legal agreement with terms",
+           "receipt": "Proof of payment",
+           "application": "Form with applicant details"}',
+          MAP('version', '2.1')
+        ) AS doc_type
+      FROM parsed
+      WHERE is_variant_null(parsed_content:error_status)
+  input:
+    - node: src_pdf_files
+      input_port: data
+      output_port: result
+```
+
+#### Pattern D: Specific pages only (large PDFs)
+
+```yaml
+- id: parse_first_pages
+  template: sql
+  name: parse_first_pages
+  config:
+    query: |
+      SELECT
+        path,
+        ai_parse_document(content, MAP('version', '2.0', 'pageRange', '1-3')) AS parsed_content
+      FROM src_pdf_files
+  input:
+    - node: src_pdf_files
+      input_port: data
+      output_port: result
+```
+
+**PDF Parse limitations:**
+- **Cost**: `ai_parse_document` calls an AI model per page. Large PDFs (100+ pages) or large batches (1000+ files) incur significant cost — use `pageRange` to limit when possible.
+- **Supported formats**: PDF, JPG, JPEG, PNG, TIFF, TIF, DOC, DOCX, PPT, PPTX.
+- **Error handling**: Always filter with `WHERE is_variant_null(parsed_content:error_status)` — corrupted or unscannable pages produce errors in the VARIANT.
+- **VARIANT type**: ai_parse_document and ai_extract return VARIANT. Designer preview fails with `UNSUPPORTED_OPERATION` if VARIANT reaches a downstream Transform or Join. **Always CAST VARIANT to concrete types (STRING, DOUBLE, DATE) inline in the same SQL operator** — never let VARIANT flow downstream.
+- **Nested response envelope**: ai_extract v2.1 wraps results under `response`. Access `ex:response:field:value`, not `ex:field`. See Pattern A/B above.
+- **Mixed date formats**: AI-extracted dates often arrive in inconsistent formats (MM/dd/yyyy, yyyy-M-d, dd-MMM-yyyy). Use `COALESCE(TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy'), TRY_TO_TIMESTAMP(col, 'yyyy-M-d'), TRY_TO_TIMESTAMP(col, 'dd-MMM-yyyy'))` in a downstream Transform.
+- **Handwritten text**: OCR quality varies; printed forms work well, handwritten text may be partial.
+- **Tables in PDFs**: Extracted as HTML in the `elements` array (type = `table`). For complex multi-page tables, results may need manual cleanup.
+
+#### Pattern E: PDF form filling (AcroForm — Python only, no visual operator)
+
+Alteryx fills PDF forms via the Python tool with pypdf. VDP equivalent is a `python` operator. This is a valid Python use case (external library with no SQL equivalent).
+
+```yaml
+- id: fill_pdf_forms
+  template: python
+  name: fill_pdf_forms
+  config:
+    code: |
+      import subprocess, sys
+      subprocess.check_call([sys.executable, "-m", "pip", "install", "pypdf", "-q"])
+
+      from pypdf import PdfReader, PdfWriter
+      import os
+
+      TEMPLATE = "/Volumes/catalog/schema/volume/template_form.pdf"
+      OUTDIR   = "/Volumes/catalog/schema/volume/filled_forms"
+      ON = "/Yes"   # AcroForm checkbox-on value
+
+      df = inputs["data"][0]
+      rows = df.collect()
+      os.makedirs(OUTDIR, exist_ok=True)
+
+      manifest = []
+      for rec in rows:
+          reader = PdfReader(TEMPLATE)
+          writer = PdfWriter()
+          writer.append(reader)
+          writer.set_need_appearances_writer(True)
+
+          # Map DataFrame columns → PDF form field names
+          field_values = {
+              "form_field_name": str(rec["column_name"]),
+              # ... add all field mappings
+          }
+          # Checkboxes: set to ON ("/Yes") for the matching option
+          # field_values["checkbox_field"] = ON
+
+          slug = "".join(c if c.isalnum() else "_" for c in str(rec["id_col"])).strip("_")
+          outp = os.path.join(OUTDIR, f"filled_{slug}.pdf")
+
+          for pg in writer.pages:
+              writer.update_page_form_field_values(pg, field_values, auto_regenerate=False)
+          with open(outp, "wb") as o:
+              writer.write(o)
+
+          manifest.append((str(rec["id_col"]), outp, "filled"))
+
+      from pyspark.sql.types import StructType, StructField, StringType
+      schema = StructType([
+          StructField("id", StringType()),
+          StructField("filled_pdf_path", StringType()),
+          StructField("status", StringType()),
+      ])
+      result = spark.createDataFrame(manifest, schema)
+  input:
+    - node: upstream_source
+      input_port: data
+      output_port: data
+```
+
+**Notes:**
+- `pip install pypdf` is required — include in the code block.
+- `set_need_appearances_writer(True)` ensures form fields render in viewers that don't re-render AcroForms.
+- Checkboxes use `/Yes` (or `/Off`) — inspect the PDF field names with `PdfReader(path).get_fields()`.
+- Output filled PDFs to a UC Volume path; produce a manifest DataFrame for downstream tracking.
+- For the manifest output, use `output_type: file` (CSV) to the same Volume folder, NOT a Delta table — the filled PDFs are the primary deliverable.
 
 ### Unity Catalog table source (incl. UC Federation foreign catalogs)
 
@@ -1204,12 +1680,22 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 | Interface tools | No form UI | Job parameters or Databricks App |
 | Spatial without Sedona | `ST_*` not found | Enable Sedona on the cluster, or mark MANUAL |
 | Excel `.xlsb` / `.xlsm` macros | Macros not executed | Pandas reads cell values only — VBA macros must be ported manually |
+| Excel write-back formatting | Charts/pivots don't auto-refresh | Existing charts remain in template but won't update until opened in Excel |
+| Excel write-back large datasets | OOM on driver | `toPandas()` collects all data; for >1M rows use Parquet/CSV instead |
+| PDF parse cost | AI model call per page | Use `pageRange` option to limit pages; batch large volumes off-peak |
+| PDF handwritten text | Partial OCR | Printed forms work well; handwritten fields may be incomplete — flag **REVIEW** |
 | Iterative joins on huge tables | OOM | Use broadcast hint in SQL: `/*+ BROADCAST(small) */` |
 | Designer Filter is graphical, not free-form SQL | Cannot enter `REGEXP_LIKE`, `BETWEEN`, multi-AND-OR mixes directly | Fall back to `sql` operator |
 | Designer Join has no cross-join | Append Fields cannot map to `join` | Use a `sql` operator with `CROSS JOIN` |
 | Aggregate has no collect_list/set (array output) | Alteryx Summarize → Concat List doesn't fit | Use `sql` with `collect_list(col)` / `collect_set(col)`. Note: FIRST, LAST, CONCAT (string), and COUNT_DISTINCT are now natively supported by the Aggregate operator. |
 | Combine requires matching schemas | Heterogeneous Alteryx Unions fail | Pre-align schemas with two `transform` operators before `combine` |
 | YAML docstring colon in `description.text` breaks the cell | Downstream cells fail with `'<this>.<port>' data is missing or not created before use` because Designer never registers the broken cell in the dataflow graph | **Always quote** any free-text YAML scalar that may contain `:`, `#`, `{`, `}`, `[`, `]`, `,`, or leading/trailing whitespace. Concretely: emit `text: "Per-category metrics: avg / median / sum / count."` (double-quoted) rather than `text: Per-category metrics: avg / median / sum / count.` |
+| `enter_data` crashes: `'DataFrame' object has no attribute 'map'` | The generated enter_data runtime uses `pdf.map()` (pandas ≥ 2.1.0 only) | Replace with `python` operator using `spark.createDataFrame(data, schema)`. Update downstream wiring: `output_port: data` → `output_port: result`. |
+| ai_extract fields are NULL despite successful parse | ai_extract v2.1 nests data under `response` envelope | Use `ex:response:field:value` path, NOT `ex:field`. See PDF Parse Patterns §Pattern A. |
+| VARIANT column breaks downstream Transform/Join | `UNSUPPORTED_OPERATION` on VARIANT type in Designer preview | CAST all VARIANT to STRING/DOUBLE/DATE inline in the same SQL operator |
+| Join@1.0.0 `expressions: []` duplicates columns | `DLTAnalysisException: duplicate column name` or `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on output | Always set explicit expressions: `["left.*", "right.needed_col"]`, excluding the right-side join key |
+| Output v4.0.0 preview fails with TABLE_OR_VIEW_NOT_FOUND | Preview only does `SELECT * FROM target` — does NOT write | Expected on first run. The actual write happens on Run All. Same for file outputs. Do not "fix" this. |
+| Mixed AI-extracted date formats | `TRY_TO_TIMESTAMP` returns NULL for non-matching formats | Use COALESCE with multiple format patterns in a Transform |
 
 ---
 
@@ -1305,6 +1791,13 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
 - [ ] Each tool converted to a VDP operator OR explicitly flagged **MANUAL/REVIEW**
 - [ ] All input file formats handled per Step 3 (and `.yxdb` flagged for export)
+- [ ] Excel ingest uses correct pattern (full file vs sheet/range/named range — see §4 Excel Ingest Patterns)
+- [ ] Excel write-back is a secondary sink AFTER Delta output (Step 9a) — never the only output
+- [ ] PDF parse uses `ai_parse_document()` → `ai_extract()` chain with error filtering (`is_variant_null`)
+- [ ] ai_extract fields accessed via `ex:response:field:value` path (v2.1 nested envelope)
+- [ ] No VARIANT columns flow to downstream operators (all CAST inline in the SQL)
+- [ ] All join operators have explicit `expressions` (no empty `[]` that duplicates keys)
+- [ ] enter_data operator previews successfully (fallback to Python if pandas `.map()` fails)
 - [ ] Source files placed in UC Volume (not Workspace `file:` paths)
 - [ ] All column names are Delta-compatible (no spaces, no special chars)
 - [ ] Type casts handle dirty data (filter or `TRY_CAST`)
