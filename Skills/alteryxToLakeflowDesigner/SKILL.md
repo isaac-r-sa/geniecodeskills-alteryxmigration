@@ -18,17 +18,19 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 ## CRITICAL RULE: Operator Selection Priority
 
 > ### MANDATORY PRE-CHECK — runs BEFORE every operator decision
-> Before writing any `sql` or `python` operator, answer ALL of these:
+> Before writing any `sql`, `python`, or `ai_function` operator, answer ALL of these in order:
 > 1. Can a **Transform** express this? (CASE WHEN, CAST, COALESCE, TRIM, UPPER, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, arithmetic, literals) → **USE TRANSFORM. STOP.**
-> 2. Can a **Filter** express this? (boolean row condition) → **USE FILTER. STOP.**
-> 3. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE) → **USE AGGREGATE. STOP.**
-> 4. Can a **Join** express this? (equi-join on key columns) → **USE JOIN. STOP.**
+> 2. Can a **Filter** express this? (boolean row condition, with optional T/F split via v2.0.0) → **USE FILTER. STOP.**
+> 3. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/COUNT_DISTINCT/FIRST/LAST/CONCAT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE) → **USE AGGREGATE. STOP.**
+> 4. Can a **Join** express this? (equi-join on key columns; use split_join for Alteryx L/J/R) → **USE JOIN. STOP.**
 > 5. Can a **Sort**, **Limit**, **Pivot**, **Combine**, or **Unique** express this? → **USE THE VISUAL OPERATOR. STOP.**
 > 6. Can a **Prepare** action express this? (trim, cast, text_case, fill_null, replace_value, regex_replace, extract, parse_date, formula) → **USE PREPARE. STOP.**
-> 7. Can an **Enter Data** express this? (small inline/lookup table) → **USE ENTER_DATA. STOP.**
+> 7. Can an **Enter Data** express this? (small inline/lookup table ≤ 20 rows) → **USE ENTER_DATA. STOP.**
+> 8. Can a **Visualization** express this? (chart, counter, funnel — do NOT add a separate Aggregate upstream) → **USE VISUALIZATION. STOP.**
+> 9. Is this reusable custom logic that exists (or should exist) as a UC function? → **USE A UDO. STOP.**
 >
-> Only if ALL seven answers are NO may you proceed to `sql` or `python`.
-> If you write `sql` or `python` without answering all seven, the operator choice is wrong.
+> Only if ALL nine answers are NO may you proceed to `sql` or `python`.
+> If you write `sql` or `python` without answering all nine, the operator choice is wrong.
 
 **Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
 
@@ -64,26 +66,53 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 3. Is the table millions of rows? → **NOT AI** (cost/latency explosion)
 4. Is it genuinely creative/semantic with no deterministic equivalent? → **AI Function** ✅
 
-### Priority 3: SQL (ONLY after the mandatory pre-check passes, and only for these specific patterns)
+### Priority 3: User-Defined Operators (UDO) — for reusable custom functions
+
+When custom logic is needed AND will be reused across pipelines, register it as a UDO rather than embedding it in a raw `python` cell. UDOs appear in the Designer palette as first-class visual operators.
+
+| UDO Subtype | Use For | Example |
+|---|---|---|
+| **`uc-udf`** | Row-level custom transform registered as a UC UDF | Currency conversion, address normalization, custom hash |
+| **`uc-udtf`** | Multi-row / stateful operation registered as a UC UDTF | ML model scoring, clustering, batch enrichment |
+| **`python-run-function`** | Standalone Python callable, no UC dependency | External API call, email notification, PDF generation |
+
+**Promote to UDO when:**
+- The same logic appears in ≥2 pipelines (or is likely to)
+- The function already exists (or should exist) as a UC UDF/UDTF
+- The user has a library of reusable transforms (e.g., tax calculation, compliance rules)
+- The Alteryx workflow calls a `.yxi` Custom Tool with a known Python implementation
+
+**Do NOT promote to UDO when:**
+- The operation is expressible with a built-in operator (Transform, Aggregate, etc.)
+- The custom logic is one-off and pipeline-specific — use `python` instead
+
+**Registration**: UDOs are defined in `.user_defined_operators.yaml` in the workspace. The `template` field in the YAML docstring is the UDO's registered identifier (not a fixed value like `transform`). See § 2.15 for YAML examples.
+
+### Priority 4: SQL (ONLY after the mandatory pre-check passes, and only for these specific patterns)
 
 - **Window functions**: ROW_NUMBER, RANK, DENSE_RANK, NTILE, LAG, LEAD, SUM/AVG/COUNT OVER(...)
-- **COUNT(DISTINCT col)** — Aggregate operator doesn't support it
-- **STDDEV, VARIANCE, PERCENTILE_APPROX** in aggregation context with COUNT DISTINCT in same query
+- **COLLECT_LIST / COLLECT_SET** — returns arrays, not supported by Aggregate
 - **CTEs** — ONLY when required for SEQUENCE/EXPLODE or self-referencing subqueries
 - **SEQUENCE + EXPLODE** (calendar/date generation)
 - **Subqueries** (SELECT FROM (SELECT ...)) for inline DISTINCT before window
 - **Explode-to-rows tokenization** (for example, `EXPLODE(SPLIT(col, ','))`)
+- **QUALIFY** — row-level filter on window results
 
 **Do NOT use SQL for:**
 - Fixed-column string splitting — use **Transform** with `SPLIT` + `ELEMENT_AT`
 - Finite mappings / small Find Replace rules — use **Transform** CASE WHEN
-- Inline constant rows or tiny lookup tables — use `python` `spark.createDataFrame(...)` when you truly need rows, or **Transform** CASE WHEN when you only need deterministic mappings
+- Simple GROUP BY with SUM/COUNT/AVG — use **Aggregate** operator
+- COUNT(DISTINCT col) — use **Aggregate** with `COUNT_DISTINCT`
+- FIRST/LAST value per group — use **Aggregate** with `FIRST`/`LAST`
+- Simple deduplication — use **Unique** operator
+- Inline constant rows or tiny lookup tables — use **Enter Data** or **Transform** CASE WHEN
 
-### Priority 4: Python (ABSOLUTE LAST RESORT — only for)
+### Priority 5: Python (ABSOLUTE LAST RESORT — only for)
 
-- **File I/O**: CSV/Parquet writes to Volumes (4 lines max)
+- **File I/O**: Excel read/write, PDF form filling (pypdf), binary file operations
 - **ML model training/scoring**: sklearn, pyspark.ml, statsmodels
 - **External libraries** with no SQL/visual equivalent (e.g., ARIMA, Prophet)
+- **One-off custom logic** that does NOT warrant a UDO (≤1 pipeline uses it)
 
 #### Python must NEVER contain:
 - `F.withColumn("col", F.soundex(...))` → use **Transform**: `SOUNDEX(col) AS alias`
@@ -165,7 +194,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Running totals | `SUM(col) OVER (... ROWS UNBOUNDED PRECEDING)` |
 | Deduplication | `ROW_NUMBER() OVER (PARTITION BY key ...) WHERE rn = 1` |
 | NTILE / ranking | `NTILE(10) OVER (ORDER BY ...)` |
-| ~~COUNT DISTINCT~~ | Now supported by visual **Aggregate** operator as `COUNT_DISTINCT` — no SQL needed |
+| ~~COUNT DISTINCT~~ | ✅ Now supported by visual **Aggregate** operator as `COUNT_DISTINCT` — no SQL needed |
 | Subqueries / CTEs | Multi-step logic referencing intermediate results |
 | QUALIFY | Row-level filter on window results |
 | LAG / LEAD | `LAG(col) OVER (PARTITION BY ... ORDER BY ...)` |
@@ -225,7 +254,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Scenario | Operator |
 |----------|----------|
 | Standard aggs (SUM/AVG/COUNT/MIN/MAX) | **Aggregate** |
-| COUNT(DISTINCT col) | **SQL** |
+| COUNT(DISTINCT col) | **Aggregate** (use `COUNT_DISTINCT` fn) |
 | STDDEV / PERCENTILE alone | **Aggregate** (supported) |
 | F.first() needed | **Aggregate** with MIN substitute |
 
@@ -255,19 +284,24 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `sql` for Text To Columns into fixed N columns | `transform`: `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` — use `SPLIT` + `ELEMENT_AT` in Transform |
 | `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `transform` CASE WHEN for deterministic mappings |
 | `sql` JOIN to a ≤10-row lookup table for Find Replace | `transform` CASE WHEN — small finite mappings should stay visual |
-| Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 5 visual-operator questions first; only then use `sql` |
+| Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 9 pre-check questions first; only then use `sql` |
 | `sql` ROW_NUMBER for simple deduplication | Use visual `unique` operator — `unique_by_all_columns: false` + `columns` + optional `sort_expressions` |
 | `python` `spark.createDataFrame(...)` for small inline/lookup tables | Use visual `enter_data` operator with markdown-style table syntax |
 | `sql` COUNT(DISTINCT col) in GROUP BY | Use visual `aggregate` with `fn: COUNT_DISTINCT` — now natively supported |
 | `sql` FIRST_VALUE / LAST_VALUE in GROUP BY | Use visual `aggregate` with `fn: FIRST` or `fn: LAST` — now natively supported |
 | Two `filter` operators with inverse conditions for Alteryx T/F split | Use ONE `filter` with two output ports: `filtered_data` (T) and `excluded_data` (F) |
 | `sql` LEFT ANTI / RIGHT ANTI for Alteryx Join L/R unmatched | Use `join` with `join_type: split_join` — produces `joined_data`, `left_unmatched`, `right_unmatched` |
-| `python` for file output to Volume | Use `output` with `output_type: file` + `volume` + `file_name` + `file_type` (csv/json/excel) |
+| `python` for simple Excel/CSV/JSON file output to Volume | Use native `output` with `output_type: file`, `file_type: csv/json/excel`, `write_mode: overwrite/append` — Python is only needed for multi-sheet workbooks, formatted output, or template injection |
+| `python` `pandas.read_excel()` for simple full-file Excel reads | Use native `source` operator with `format: excel` — no Python needed. Requires Excel File Format Support enabled. Fall back to `python` only for specific sheets, ranges, named ranges, or legacy `.xls`/`.xlsb` formats |
+| `python` for JSON file output | Use native `output` with `output_type: file`, `file_type: json` — Python is only needed for pretty-printing, nested JSON, or custom envelopes |
 | `enter_data` for lookup tables when preview crashes with `'DataFrame' object has no attribute 'map'` | The built-in `enter_data` template uses `pdf.map()` which requires pandas ≥ 2.1.0. **Fallback**: replace with a `python` operator using `spark.createDataFrame(data, schema)`. Update downstream wiring from `output_port: data` → `output_port: result`. |
 | Join@1.0.0 with `expressions: []` (empty) | Always set explicit join expressions: `["left.*", "right.needed_col"]` — empty expressions pass ALL columns from both sides, duplicating the join key and causing `DLTAnalysisException: duplicate column name` downstream |
 | Treating output v4.0.0 preview `TABLE_OR_VIEW_NOT_FOUND` as a bug | The v4.0.0 output preview only does `SELECT * FROM target` — it does NOT write. First-run failure is **expected**. The actual write happens on Run All. Same for file outputs (`CF_PATH_DOES_NOT_EXIST_FOR_READ_FILES`). Do not try to "fix" this. |
 | Passing VARIANT columns to downstream Transform/Join operators | ai_parse_document and ai_extract return VARIANT. Designer preview fails with `UNSUPPORTED_OPERATION` on VARIANT. **Always CAST to STRING/DOUBLE/etc inline** in the same SQL — never let VARIANT flow downstream. |
 | `TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy')` on AI-extracted dates | AI-extracted dates often come in mixed formats (MM/dd/yyyy, yyyy-M-d, dd-MMM-yyyy). Use `COALESCE(TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy'), TRY_TO_TIMESTAMP(col, 'yyyy-M-d'), TRY_TO_TIMESTAMP(col, 'dd-MMM-yyyy'))` in a Transform. |
+| Reusable Python logic duplicated across pipelines | Promote to a **UDO** (`uc-udf` for row-level, `uc-udtf` for multi-row, `python-run-function` for external calls). Register once, reuse everywhere as a visual operator. |
+| `python` node calling a UC UDF via `spark.sql("SELECT my_udf(...)")` | Use a **`uc-udf` UDO** instead — it makes the function a drag-and-drop operator in the palette, with proper type checking and documentation. |
+| `sql` calling a UC UDTF via `SELECT * FROM my_udtf(TABLE(...))` | Use a **`uc-udtf` UDO** instead — wraps the UDTF as a visual operator with explicit input/output column mapping. |
 
 
 ---
@@ -283,12 +317,12 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Template (YAML) | UI label | Inputs (port → upstream output) | Output port | Required `config` keys |
 |---|---|---|---|---|
 | `source` | Source | (none) | `data` | `file_source: {path, format, header, inferSchema, ...}` **OR** `table_source: {tableName: "catalog.schema.table"}` |
-| `output` | Output | `data` | (terminal) | `catalog`, `schema`, `table_name` |
+| `output` | Output | `data` | (terminal) | Three output types: **Table** (`output_type: table`) — `catalog`, `schema`, `table_name`; **Materialized View** (`output_type: materialized_view`) — publishes as an MV in UC that refreshes on each run; **File** (`output_type: file`) — `catalog`, `schema`, `volume`, `file_name`, `file_type: csv/json/excel`. **Write modes** (table & file): `overwrite` (default), `append` (adds rows to existing), **`merge`** (table only — upserts by `merge_keys`). Preview is read-only (expected `TABLE_OR_VIEW_NOT_FOUND` on first run); actual write happens on Run All. |
 | `ai_function` | AI Function | `data` | `ai_data` | `expressions: [SQL expressions calling ai_* functions]` (returns those columns plus `*`) |
-| `aggregate` | Aggregate | `data` | `aggregated_data` | `group_bys: [{expr, type: expr}, ...]`, `aggregations: [{columnExpr: {expr, type: expr}, fn, alias}, ...]`. Supported `fn`: AVG, COUNT, MAX, MEAN, MEDIAN, MIN, PERCENTILE, STDDEV, SUM, VARIANCE |
+| `aggregate` | Aggregate | `data` | `aggregated_data` | `group_bys: [{expr, type: expr}, ...]`, `aggregations: [{columnExpr: {expr, type: expr}, fn, alias}, ...]`. Supported `fn`: AVG, COUNT, **COUNT_DISTINCT**, **FIRST**, **LAST**, **CONCAT**, MAX, MEAN, MEDIAN, MIN, PERCENTILE, STDDEV, SUM, VARIANCE. FIRST/LAST are non-deterministic without upstream Sort. CONCAT joins strings with optional `separator` (default `", "`). |
 | `combine` | Combine | `data_0`, `data_1` | `combined_data` | `operator`: UNION / INTERSECT / EXCEPT / MINUS; `quantifier`: ALL / DISTINCT |
-| `filter` | Filter | `data` | `filtered_data` | `condition: "<SQL boolean expression>"` (the UI is a visual builder but the export is a SQL string — feel free to write SQL directly) |
-| `join` | Join | `left`, `right` | `joined_data` | `join_type`: inner / left / right / full / cross_join; `join_conditions: "left.col_a = right.col_b AND ..."` (always use the `left.` / `right.` aliases — that's what the runtime aliases the inputs as); optional `expressions: [select-expressions]` |
+| `filter` | Filter | `data` | `filtered_data` (v1.0.0) **or** `filtered_data` + `excluded_data` (v2.0.0) | `condition: "<SQL boolean expression>"`. **v2.0.0** (recommended) emits **two output ports**: `filtered_data` (matching rows — Alteryx True) and `excluded_data` (non-matching — Alteryx False). Maps directly to Alteryx Filter T/F. Always use `templateVersion: 2.0.0` when both branches are needed. |
+| `join` | Join | `left`, `right` | `joined_data` (standard) **or** `joined_data` + `left_unmatched` + `right_unmatched` (split_join) | `join_type`: inner / left / right / full / cross_join / **split_join**; `join_conditions: "left.col_a = right.col_b AND ..."` (always use the `left.` / `right.` aliases). Optional `expressions: [select-expressions]` — **always set explicit expressions** (never empty `[]`). **split_join** (recommended for Alteryx Join) produces 3 output ports mapping directly to Alteryx L/J/R. |
 | `limit` | Limit | `data` | `limited_data` | `n: <integer>` — verified |
 | `pivot` | Pivot | `data` | `pivoted_data` | **Rows → Columns mode**: `mode: pivot`, `group_by: [<col>, ...]`, `pivot_column: <col>`, `value_column: <col>`, `agg: count\|sum\|avg\|min\|max`. **Columns → Rows mode**: `mode: unpivot`, `id_columns: [...]`, `value_columns: [...]`, `key_name: <out_key>`, `value_name: <out_value>` — verified |
 | `sort` | Sort | `data` | `sorted_data` | `sort_expressions: [{columnExpr: {expr, type: expr}, sortBy: ASC / DESC}, ...]` |
@@ -433,16 +467,18 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 |---|---|---|
 | Input Data (file) | `source` (file_source) | UC Volume path; `format` from extension |
 | Input Data (DB / ODBC / OLEDB) | `source` (table_source) or `python` (JDBC) | Use UC Connections / Lakehouse Federation when possible |
-| Output Data (table) | `output` | catalog + schema + table_name |
-| Output Data (file) | `output` (file mode) | `output_type: file` with `volume`, `file_name`, `file_type` (csv, json, excel). No Python needed. Fall back to `python` only for formats not supported by the output operator. |
+| Output Data (table) | `output` | `output_type: table`, catalog + schema + table_name, `write_mode: overwrite/append/merge`. Merge upserts by `merge_keys`. |
+| Output Data (file — CSV/JSON/Excel) | `output` (file mode) | `output_type: file`, `file_type: csv/json/excel`, `write_mode: overwrite/append`. Supports **Excel (.xlsx) natively** — no Python needed for simple data dumps. Fall back to `python` only for multi-sheet workbooks, formatted output, or template injection. |
 | Browse | *omit* | Browse is just a preview tile — no VDP analog needed |
 | Text Input | `enter_data` | Inline table with markdown-style syntax (header row + separator + data rows). Use `enter_data` for small static lookup/constant tables. Fall back to `python` `spark.createDataFrame` only for programmatic row generation. |
 | Directory | `python` | `os.listdir` over a Volume path; see Step 4 |
 | Date/Time Now | `transform` | `current_timestamp()` / `current_date()` |
-| Input Data (.xlsx — full file) | `python` | `pandas.read_excel()` → `spark.createDataFrame()`; see §4 Excel Ingest Patterns |
+| Input Data (.xlsx — full file, single sheet) | **`source`** (native) or `python` | **Preferred**: `source` with `file_source: {path, format: excel}` — reads natively via `read_files`. Requires [Excel File Format Support](https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/volumes-read-write#excel) enabled. Fall back to `python` `pandas.read_excel()` only if the feature is disabled or for `.xlsb`/`.xls` legacy formats. See §4 Excel Ingest Patterns. |
 | Input Data (.xlsx — specific sheet/range/named range) | `python` | `pandas.read_excel(sheet_name=, usecols=, skiprows=, nrows=, header=)`; see §4 Excel Ingest Patterns |
 | Input Data (.xls legacy) | `python` | `pandas.read_excel(engine='xlrd')`; see §4 Excel Ingest Patterns |
-| Output Data (.xlsx) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns |
+| Output Data (.xlsx — simple) | **`output`** (file mode) | `output_type: file`, `file_type: excel`, `write_mode: overwrite/append` — **native, no Python** |
+| Output Data (.xlsx — multi-sheet/formatted/template) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns |
+| Output Data (materialized view) | `output` (MV mode) | `output_type: materialized_view` — publishes as an MV in UC, refreshes on each run |
 | Input Data (PDF — form/document) | `sql` or `python` | `ai_parse_document()` → `ai_extract()` chain; see §4 PDF Parse Patterns |
 | Map Input | **MANUAL** | Designer-only; replace with a Volume-hosted file |
 
@@ -627,7 +663,9 @@ See Step 11 for full handling.
 
 ### 2.15 User-Defined Operators (UDO)
 
-UDOs have no direct Alteryx equivalent — they are a VDP-native feature for packaging reusable logic as a first-class visual operator. Consider suggesting a UDO **only when** converting Alteryx tools that contain custom Python logic the user is likely to reuse across multiple pipelines.
+UDOs are a VDP-native feature for packaging reusable logic as a **first-class visual operator** that appears in the Designer palette. They are the preferred path for custom functions that are reused across pipelines — **always prefer a UDO over a raw `python` node** when the logic is reusable.
+
+#### When to create/use a UDO
 
 | Alteryx Pattern | UDO Subtype | Notes |
 |---|---|---|
@@ -635,9 +673,111 @@ UDOs have no direct Alteryx equivalent — they are a VDP-native feature for pac
 | Python Tool performing ML scoring via an MLflow model | `uc-udtf` | UDTF accepts the full table, applies the model, returns scored rows. Cleaner and more reusable than `python` with `mlflow.pyfunc.load_model`. |
 | Python Tool calling an external API (e.g. Slack, email, enrichment service) | `python-run-function` | Standalone Python callable; no UC required. Keeps pipeline logic consistent without embedding credentials in a raw `python` cell. |
 | Custom Tool (`.yxi`) with a known Python implementation | `uc-udtf` or `python-run-function` | Assess whether the logic generalizes; if yes, register as UDO. If one-off, use a `python` node instead. |
+| Tax calculation / compliance formula reused across jurisdictions | `uc-udf` | Register once in UC, reuse across all tax pipelines. |
+| Data quality / validation rule library | `uc-udf` or `uc-udtf` | Standard DQ checks become drag-and-drop operators. |
 | R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first. |
 
+#### UDO YAML templates
+
+**`uc-udf` — Row-level UC UDF:**
+```yaml
+- id: apply_tax_calc
+  template: my_tax_calculator    # matches the UDO registered name
+  name: apply_tax_calc
+  position: { x: 600, y: 140 }
+  description:
+    text: "Apply custom tax calculation UDF"
+    hash: ""
+  previewMode: "1000"
+  config:
+    function_name: catalog.schema.calculate_tax
+    input_columns:
+      - gross_amount
+      - jurisdiction
+    output_column: tax_due
+  input:
+    - node: upstream_op
+      input_port: data
+      output_port: transformed_data
+```
+
+**`uc-udtf` — Multi-row UC UDTF (ML scoring, batch enrichment):**
+```yaml
+- id: score_model
+  template: my_ml_scorer    # matches the UDO registered name
+  name: score_model
+  position: { x: 900, y: 140 }
+  description:
+    text: "Score rows with ML model via UC UDTF"
+    hash: ""
+  previewMode: "1000"
+  config:
+    function_name: catalog.schema.score_churn_model
+    input_columns:
+      - recency
+      - frequency
+      - monetary
+    output_columns:
+      - churn_score
+      - churn_segment
+  input:
+    - node: upstream_op
+      input_port: data
+      output_port: aggregated_data
+```
+
+**`python-run-function` — Standalone Python callable:**
+```yaml
+- id: call_enrichment_api
+  template: my_enrichment_func    # matches the UDO registered name
+  name: call_enrichment_api
+  position: { x: 1200, y: 140 }
+  description:
+    text: "Enrich records via external API"
+    hash: ""
+  previewMode: "1000"
+  config:
+    function_module: my_package.enrichment
+    function_name: enrich_vendor_data
+    params:
+      api_key_secret: scope/key
+      batch_size: 100
+  input:
+    - node: upstream_op
+      input_port: data
+      output_port: data
+```
+
+#### UDO registration
+
+UDOs are registered in `.user_defined_operators.yaml` in the workspace root:
+```yaml
+operators:
+  - name: my_tax_calculator
+    type: uc-udf
+    display_name: Tax Calculator
+    description: Calculate tax using jurisdiction-specific rules
+    catalog: main
+    schema: tax_functions
+    function: calculate_tax
+  - name: my_ml_scorer
+    type: uc-udtf
+    display_name: ML Churn Scorer
+    description: Score customer churn risk
+    catalog: main
+    schema: ml_functions
+    function: score_churn_model
+```
+
 **Emit a `markdown` note** adjacent to any UDO cell that explains: the UDO name, the UC catalog path (for `uc-udf` / `uc-udtf`), and any one-time setup the user must perform before running the pipeline.
+
+#### UDO promotion checklist
+
+When converting a `python` operator, always ask:
+1. Does this logic appear in ≥2 pipelines (or is it likely to)? → **Promote to UDO**
+2. Does a UC UDF/UDTF already exist for this? → **Use `uc-udf` / `uc-udtf` UDO**
+3. Is the user building a library of reusable functions? → **Register as UDO**
+4. Is this a one-off, pipeline-specific operation? → **Keep as `python`**
 
 ---
 
@@ -647,7 +787,9 @@ UDOs have no direct Alteryx equivalent — they are a VDP-native feature for pac
 |---|---|---|---|
 | **Tabular** | CSV / TSV | `source` (file_source, `format: csv`) | `header`, `delimiter`, `inferSchema` |
 | | Fixed-width | `python` | `spark.read.text` + `substring` slices |
-| | Excel `.xlsx` / `.xlsm` / `.xlsb` | `python` | `pandas.read_excel` → `spark.createDataFrame`; or `com.crealytics:spark-excel` |
+| | Excel `.xlsx` / `.xlsm` (simple full file) | **`source`** (native) | `file_source: {path: /Volumes/.../file.xlsx, format: excel}` — reads via `read_files`. Requires Excel File Format Support enabled. |
+| | Excel `.xlsx` (specific sheet/range/named range) | `python` | `pandas.read_excel(sheet_name=, usecols=, skiprows=, nrows=)` — native source cannot target specific sheets/ranges |
+| | Excel `.xlsb` (binary) / `.xls` (legacy) | `python` | `pandas.read_excel(engine='pyxlsb')` or `engine='xlrd'` — binary/legacy formats not supported by native source |
 | | Excel `.xls` (legacy) | `python` | Same as above; `pandas` + `xlrd` |
 | **Semi-structured** | JSON | `source` (file_source, `format: json`) | Multiline option for pretty JSON |
 | | XML | `python` | `spark-xml` (`com.databricks:spark-xml`) `rowTag` |
@@ -676,7 +818,9 @@ UDOs have no direct Alteryx equivalent — they are a VDP-native feature for pac
 | | UC Tables | `source` (table_source) | Preferred over JDBC for Databricks-native data |
 | | Snowflake / Redshift / SQL Server / Oracle / Postgres / Teradata | `python` (JDBC) or UC Federation | Prefer Lakehouse Federation foreign catalog → `table_source` |
 
-**Rule of thumb**: if a format is in the `source.file_source.format` enum, use `source`. Otherwise use `python`. Always copy local files to a UC **Volume** first (Step 4).
+**Rule of thumb**: if a format is in the `source.file_source.format` enum (`csv`, `json`, `parquet`, `avro`, `orc`, `excel`), use `source`. For **output** file writes, the native `output` operator supports only `csv`, `json`, and `excel` — for Parquet/Avro/ORC/XML writes, use `python`. Always copy local files to a UC **Volume** first (Step 4).
+
+**Source operator folder ingestion**: The `source` operator can target an entire UC Volume or folder path — Designer auto-detects the format and combines all files into one table. For structured formats (CSV, JSON, Excel, Parquet), all files in the folder are unioned. For PDF documents, each file becomes one row.
 
 ---
 
@@ -765,7 +909,7 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 
 | Scenario | Operator | Method |
 |---|---|---|
-| Full file, single sheet, no range filtering | `python` | `pandas.read_excel(path)` |
+| Full file, single sheet, no range filtering | **`source`** (native) or `python` | **Preferred**: `source` with `format: excel` (requires Excel File Format Support). Fallback: `pandas.read_excel(path)` |
 | Specific sheet by name or index | `python` | `pandas.read_excel(path, sheet_name='Sheet2')` or `sheet_name=1` |
 | Specific cell range (e.g. A1:G50) | `python` | `openpyxl` load + slice, then `pd.DataFrame` |
 | Named range / defined name | `python` | `openpyxl` load → `wb.defined_names[name]` → cell range → slice |
@@ -776,7 +920,24 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 | `.xlsm` with macros | `python` | Reads cell values only — VBA macros are NOT executed |
 | Very large Excel (100k+ rows) | `python` | `openpyxl` read_only mode or spark-excel (if available) |
 
-#### Pattern A: Full file / single sheet (most common)
+#### Pattern A0: Native source (PREFERRED for simple Excel reads)
+
+```yaml
+- id: src_excel
+  template: source
+  name: src_excel
+  config:
+    file_source:
+      path: /Volumes/cat/raw/landing/book.xlsx
+      format: excel
+      header: true
+      inferSchema: true
+  input: []
+```
+
+> **Note**: Native Excel source requires [Excel File Format Support](https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/volumes-read-write#excel) to be enabled on the workspace. If disabled, fall back to Pattern A (Python). The native source reads the first sheet by default — for specific sheets, ranges, or named ranges, use the Python patterns below.
+
+#### Pattern A: Full file / single sheet (Python fallback)
 
 ```yaml
 - id: src_excel
@@ -872,18 +1033,65 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 
 ### Excel Write-back Patterns
 
-**Decision tree:**
+**Decision tree — pick the first that applies:**
 
 | Scenario | Operator | Method |
 |---|---|---|
-| Simple data dump to `.xlsx` | `python` | `toPandas()` → `pandas.to_excel()` |
-| Multiple sheets in one workbook | `python` | `pd.ExcelWriter` context manager |
+| Simple data dump to `.xlsx` (overwrite) | **`output`** (native) | `output_type: file`, `file_type: excel`, `write_mode: overwrite` — **NO Python needed** |
+| Append rows to existing `.xlsx` | **`output`** (native) | `output_type: file`, `file_type: excel`, `write_mode: append` — **NO Python needed** |
+| Simple data dump to `.csv` | **`output`** (native) | `output_type: file`, `file_type: csv`, `write_mode: overwrite` or `append` |
+| Simple data dump to `.json` | **`output`** (native) | `output_type: file`, `file_type: json`, `write_mode: overwrite` or `append` |
+| Multiple sheets in one workbook | `python` | `pd.ExcelWriter` context manager (native output writes single-sheet only) |
 | Formatted output (bold headers, number formats, column widths) | `python` | `openpyxl` Workbook + manual styling |
-| Write into an existing template | `python` | `openpyxl.load_workbook(template)` → write cells → save to Volume |
+| Write into an existing Excel template | `python` | `openpyxl.load_workbook(template)` → write cells → save to Volume |
+
+> **ALWAYS prefer the native `output` operator** for simple Excel/CSV/JSON file writes. Only fall back to `python` when you need multi-sheet workbooks, cell-level formatting, or template injection.
 
 **IMPORTANT**: Always materialize to a Delta table first (Step 9a canonical output), then add the Excel write-back as a secondary sink. The Delta table is the source of truth.
 
-#### Pattern A: Simple data dump
+#### Pattern A0: Native Excel output (PREFERRED for simple writes)
+
+```yaml
+- id: write_excel_native
+  template: output
+  templateVersion: 4.0.0
+  name: write_excel_native
+  config:
+    output_type: file
+    catalog: cat
+    schema: exports
+    volume: reports
+    file_name: output_report.xlsx
+    file_type: excel
+    write_mode: overwrite
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <last_output_port>
+```
+
+#### Pattern A0-append: Native Excel append (add rows to existing file)
+
+```yaml
+- id: append_excel_native
+  template: output
+  templateVersion: 4.0.0
+  name: append_excel_native
+  config:
+    output_type: file
+    catalog: cat
+    schema: exports
+    volume: reports
+    file_name: running_log.xlsx
+    file_type: excel
+    write_mode: append
+  input:
+    - node: new_data
+      input_port: data
+      output_port: <port>
+```
+
+#### Pattern A1: Python data dump (ONLY when native output is insufficient)
 
 ```yaml
 - id: write_excel
@@ -989,6 +1197,102 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 - **Formatting preservation**: Writing into a template preserves existing formatting in untouched cells.
 - **File size**: `toPandas()` collects all data to the driver. For datasets >1M rows, consider Parquet/CSV output instead.
 - **Charts/pivot tables in templates**: Existing charts remain but won't auto-refresh until opened in Excel.
+
+
+
+### CSV Write-back Patterns
+
+**Decision tree — pick the first that applies:**
+
+| Scenario | Operator | Method |
+|---|---|---|
+| Simple CSV output (overwrite or append) | **`output`** (native) | `output_type: file`, `file_type: csv`, `write_mode: overwrite/append` — **NO Python needed** |
+| Custom delimiter (TSV, pipe-separated) | `python` | Native output writes comma-delimited only; use `.write.option("delimiter", "\t").csv(...)` |
+| Single-file output (no Spark partitioning) | `python` | `.coalesce(1).write.csv(...)` for a single file — native output may write multiple part files for large data |
+| CSV with specific encoding (UTF-16, Latin-1) | `python` | `pandas.to_csv(encoding=...)` |
+
+> **ALWAYS prefer the native `output` operator** for simple CSV file writes. Only fall back to `python` for custom delimiters, single-file guarantees, or encoding requirements.
+
+#### Pattern A: Native CSV output (PREFERRED)
+
+```yaml
+- id: write_csv_native
+  template: output
+  templateVersion: 4.0.0
+  name: write_csv_native
+  config:
+    output_type: file
+    catalog: cat
+    schema: exports
+    volume: data_feeds
+    file_name: orders_export.csv
+    file_type: csv
+    write_mode: overwrite
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <last_output_port>
+```
+
+### JSON Write-back Patterns
+
+**Decision tree — pick the first that applies:**
+
+| Scenario | Operator | Method |
+|---|---|---|
+| Simple JSON file output (overwrite) | **`output`** (native) | `output_type: file`, `file_type: json`, `write_mode: overwrite` — **NO Python needed** |
+| Append JSON to existing file | **`output`** (native) | `output_type: file`, `file_type: json`, `write_mode: append` — **NO Python needed** |
+| JSON Lines (NDJSON) format | **`output`** (native) | Same as above — Spark writes JSON as JSON Lines by default |
+| Pretty-printed JSON (indented) | `python` | Native output writes JSON Lines; use `json.dumps(indent=2)` for human-readable formatting |
+| Nested/hierarchical JSON from flat DataFrame | `python` | Build nested structs with `to_json(struct(...))` or custom Python logic |
+| JSON with custom schema/envelope | `python` | Wrap data in a custom root key or metadata envelope |
+
+> **ALWAYS prefer the native `output` operator** for simple JSON file writes. Only fall back to `python` when you need pretty-printing, custom nesting, or envelope structures.
+
+#### Pattern A: Native JSON output (PREFERRED)
+
+```yaml
+- id: write_json_native
+  template: output
+  templateVersion: 4.0.0
+  name: write_json_native
+  config:
+    output_type: file
+    catalog: cat
+    schema: exports
+    volume: api_feeds
+    file_name: results.json
+    file_type: json
+    write_mode: overwrite
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <last_output_port>
+```
+
+#### Pattern B: Pretty-printed JSON (Python fallback)
+
+```yaml
+- id: write_json_pretty
+  template: python
+  name: write_json_pretty
+  config:
+    code: |
+      import json
+      df = inputs["data"][0]
+      records = [row.asDict() for row in df.collect()]
+      with open("/Volumes/cat/exports/api_feeds/results_pretty.json", "w") as f:
+          json.dump(records, f, indent=2, default=str)
+      result = df  # pass-through
+  input:
+    - node: last_transform
+      input_port: data
+      output_port: <port>
+```
+
+**Limitations of JSON write-back:**
+- Native output writes JSON Lines (one JSON object per line) — not a single JSON array. Most downstream systems accept NDJSON, but if the consumer expects a JSON array, use the Python pattern.
+- `df.collect()` loads all data to the driver. For datasets >1M rows, consider writing as JSON Lines (native output) or Parquet instead.
 
 ### PDF Parse Patterns (ai_parse_document → ai_extract)
 
@@ -1425,7 +1729,7 @@ Excel/CSV sources may contain error values like `#`, `#N/A`, `#VALUE!`, `#REF!`.
 
 ### 9a. Canonical Delta output (REQUIRED)
 
-Every converted workflow MUST end with an `output` operator:
+Every converted workflow MUST end with an `output` operator. The output operator (v4.0.0) supports **table**, **materialized view**, and **file** output types with **overwrite**, **append**, and **merge** (table only) write modes:
 
 ```yaml
 - id: output_final
@@ -1445,13 +1749,28 @@ Every converted workflow MUST end with an `output` operator:
 - Preview the output node — "no columns" with no error = success.
 - "no compute attached" = user needs to click Run.
 
-### 9b. Additional non-Delta outputs (optional, downstream of 9a)
+### 9b. Additional output types (optional, downstream of or instead of 9a)
+
+The `output` operator (v4.0.0) supports three output types and three write modes:
+
+| Output Type | Config | Description |
+|---|---|---|
+| **Table** | `output_type: table` | Managed UC Delta table (default, canonical) |
+| **Materialized View** | `output_type: materialized_view` | Publishes as an MV in UC; refreshes on each pipeline run |
+| **File** | `output_type: file` | Writes CSV, Excel, or JSON to a UC Volume |
+
+| Write Mode | Applies To | Description |
+|---|---|---|
+| **overwrite** | table, file | Replace existing contents (default) |
+| **append** | table, file | Add new rows to existing data |
+| **merge** | table only | Upsert by `merge_keys` — inserts new rows, updates existing matches |
 
 **Preferred: Use `output` with `output_type: file`** for CSV/JSON/Excel file output:
 
 ```yaml
 - id: write_csv_to_volume
   template: output
+  templateVersion: 4.0.0
   name: write_csv_to_volume
   config:
     output_type: file
@@ -1460,13 +1779,35 @@ Every converted workflow MUST end with an `output` operator:
     volume: orders_csv
     file_name: orders.csv
     file_type: csv
+    write_mode: overwrite
   input:
     - node: last_transform
       input_port: data
       output_port: <last_operator_output_port>
 ```
 
-Fall back to `python` only for formats not supported by the output operator (e.g. Parquet with custom options). When the original Alteryx workflow requires Python file writes:
+#### Merge (upsert) example — table output only
+
+```yaml
+- id: output_upsert
+  template: output
+  templateVersion: 4.0.0
+  name: output_upsert
+  config:
+    output_type: table
+    catalog: main
+    schema: silver
+    table_name: customers
+    write_mode: merge
+    merge_keys:
+      - customer_id
+  input:
+    - node: deduped_customers
+      input_port: data
+      output_port: unique_data
+```
+
+Fall back to `python` only for formats not supported by the native output operator. **Formats requiring Python for file output**: Parquet, Avro, ORC, XML, TSV (custom delimiter), fixed-width — the native output only supports CSV, Excel, and JSON as file types. When the original Alteryx workflow requires Python file writes:
 
 ```yaml
 - id: write_csv_to_volume
@@ -1681,6 +2022,7 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 | Spatial without Sedona | `ST_*` not found | Enable Sedona on the cluster, or mark MANUAL |
 | Excel `.xlsb` / `.xlsm` macros | Macros not executed | Pandas reads cell values only — VBA macros must be ported manually |
 | Excel write-back formatting | Charts/pivots don't auto-refresh | Existing charts remain in template but won't update until opened in Excel |
+| Native Excel output is single-sheet only | Multi-sheet workbooks need Python | Use native `output` for simple single-sheet writes; fall back to `python` + `pd.ExcelWriter` for multi-sheet |
 | Excel write-back large datasets | OOM on driver | `toPandas()` collects all data; for >1M rows use Parquet/CSV instead |
 | PDF parse cost | AI model call per page | Use `pageRange` option to limit pages; batch large volumes off-peak |
 | PDF handwritten text | Partial OCR | Printed forms work well; handwritten fields may be incomplete — flag **REVIEW** |
@@ -1791,7 +2133,8 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
 - [ ] Each tool converted to a VDP operator OR explicitly flagged **MANUAL/REVIEW**
 - [ ] All input file formats handled per Step 3 (and `.yxdb` flagged for export)
-- [ ] Excel ingest uses correct pattern (full file vs sheet/range/named range — see §4 Excel Ingest Patterns)
+- [ ] Excel ingest uses native `source` operator when possible (full file, single sheet, Excel File Format Support enabled); Python only for sheet/range/named range or legacy formats
+- [ ] JSON/CSV file outputs use native `output` operator (not Python)
 - [ ] Excel write-back is a secondary sink AFTER Delta output (Step 9a) — never the only output
 - [ ] PDF parse uses `ai_parse_document()` → `ai_extract()` chain with error filtering (`is_variant_null`)
 - [ ] ai_extract fields accessed via `ex:response:field:value` path (v2.1 nested envelope)
@@ -1803,10 +2146,14 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Type casts handle dirty data (filter or `TRY_CAST`)
 - [ ] SQL operators reference simple display names (no spaces)
 - [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`); fixed-column Text To Columns use `transform` with `SPLIT` + `ELEMENT_AT`; reserve `sql` for multi-granularity UNION ALL, row explosion, window functions, or unsupported functions
-- [ ] Mandatory 7-question visual-operator pre-check completed before every `sql` or `python` operator
+- [ ] Mandatory 9-question visual-operator pre-check completed before every `sql`, `python`, or `ai_function` operator
 - [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
 - [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
 - [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
+- [ ] Python operators assessed for UDO promotion (reusable logic → `uc-udf` / `uc-udtf` / `python-run-function`)
+- [ ] Filter operators use v2.0.0 when both T/F branches are needed (filtered_data + excluded_data)
+- [ ] Join operators use split_join when Alteryx L/J/R outputs are all needed (3 output ports)
+- [ ] Aggregate operators use COUNT_DISTINCT, FIRST, LAST, CONCAT where applicable (no SQL needed)
 - [ ] Reusable custom Python logic assessed for UDO promotion (`uc-udf` / `uc-udtf` / `python-run-function`) — adjacent `markdown` node added if a UDO is used
 - [ ] User was asked before consolidating multiple SQL window nodes into one
 - [ ] Deduplication uses visual `unique` operator (not SQL ROW_NUMBER) — reserve SQL only for multi-partition dedup or complex window logic
@@ -1816,6 +2163,9 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Reporting / interface — flagged **MANUAL** with Lakeview / Job / App pointer
 - [ ] Output operator configured with `catalog.schema.table_name`
 - [ ] Optional non-Delta sinks added downstream of the Delta output (Step 9b)
+- [ ] Simple Excel/CSV/JSON file outputs use native `output` operator (not Python)
+- [ ] Excel append scenarios use `output` with `write_mode: append` (not Python)
+- [ ] Merge/upsert scenarios use `output` with `write_mode: merge` + `merge_keys` (not Python/SQL MERGE)
 - [ ] Output node previews with no errors
 - [ ] Expected output file obtained from user (asked explicitly if not provided)
 - [ ] Structural validation passed (row counts by granularity match or differences explained)
