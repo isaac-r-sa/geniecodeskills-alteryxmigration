@@ -27,12 +27,29 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 > 6. Can a **Prepare** action express this? (trim, cast, text_case, fill_null, replace_value, regex_replace, extract, parse_date, formula) → **USE PREPARE. STOP.**
 > 7. Can an **Enter Data** express this? (small inline/lookup table ≤ 20 rows) → **USE ENTER_DATA. STOP.**
 > 8. Can a **Visualization** express this? (chart, counter, funnel — do NOT add a separate Aggregate upstream) → **USE VISUALIZATION. STOP.**
-> 9. Is this reusable custom logic that exists (or should exist) as a UC function? → **USE A UDO. STOP.**
+> 9. Can this be expressed as a **User-Defined Operator**? (Create one via the sidebar: "+ Create user-defined operator" → describe it → Generate preview. Or use an existing shared UDO.) → **USE A UDO. STOP.**
 >
 > Only if ALL nine answers are NO may you proceed to `sql` or `python`.
 > If you write `sql` or `python` without answering all nine, the operator choice is wrong.
 
 **Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
+
+### CRITICAL RULE: Unsupported or Uncovered Patterns
+
+When you encounter something not covered by this skill, follow this exact sequence — **do not skip straight to Python or SQL**:
+
+1. **Check for a new or updated operator first.** VDP is actively developed. Before writing custom code, search for whether the operation is now supported by an existing visual operator (e.g., Prepare formula, Aggregate function, SQL AI function, new output mode). Ask or check Databricks release notes.
+2. **Create a User-Defined Operator (UDO) instead of raw code.** If the operation isn't natively supported, create a UDO before writing raw `python` or `sql`:
+   - **Local UDO (fastest):** In the Operators sidebar, click **"+ Create user-defined operator"** → describe what you need → **"Generate preview"** → **"Approve and create"**. Genie Code generates the operator config and Python function. It appears in the palette immediately.
+   - **Shared UDO (cross-file reuse):** If the logic will be reused across pipelines, register a `python-run-function`, `uc-udf`, or `uc-udtf` in `.user_defined_operators.yaml`.
+   This keeps the pipeline **visual** — UDOs are drag-and-drop operators, not embedded code blocks. Always prefer a UDO over raw `python` or `sql`.
+3. **If no operator or UDO fits, offer the user their options.** Present the alternatives — typically:
+   - Option A: Which existing operator comes closest and its limitations
+   - Option B: A `python` operator with the custom logic (one-off, pipeline-specific only)
+   - Option C: A `sql` operator for complex query patterns (window functions, CTEs)
+   - Option D: External / Lakeflow Job task for logic that genuinely belongs outside the pipeline (e.g., email dispatch, file transfer, iterative loops)
+4. **Document the gap.** Add a `markdown` node describing what was not migrated, why, and which option the user chose.
+5. **Never silently drop** Alteryx logic. Every tool that has no VDP equivalent must appear in the pipeline's top-level `markdown` note.
 
 ### Priority 1: Visual Operators (ALWAYS try first)
 
@@ -66,27 +83,54 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 3. Is the table millions of rows? → **NOT AI** (cost/latency explosion)
 4. Is it genuinely creative/semantic with no deterministic equivalent? → **AI Function** ✅
 
-### Priority 3: User-Defined Operators (UDO) — for reusable custom functions
+### Priority 3: User-Defined Operators (UDO) — ALWAYS check before Python/SQL
 
-When custom logic is needed AND will be reused across pipelines, register it as a UDO rather than embedding it in a raw `python` cell. UDOs appear in the Designer palette as first-class visual operators.
+When an operation has no native built-in visual operator, **always evaluate whether a User-Defined Operator can express it before writing raw `python` or `sql`**. UDOs appear in the Designer palette as first-class visual operators, keeping the pipeline visual and maintainable.
 
-| UDO Subtype | Use For | Example |
+VDP Designer supports **two kinds** of UDOs:
+
+#### 3a. Local UDO (AI-generated, per-file) — TRY THIS FIRST
+
+The fastest path. Created directly from the Designer sidebar:
+1. In the **Operators menu** (left sidebar), click **"+ Create user-defined operator"**
+2. Enter a **Description** of what the operator should do (and optionally a **Name**)
+3. Click **"Generate preview"** — Genie Code generates the operator config and Python function
+4. Review the generated configuration, then click **"Approve and create"**
+
+Designer stores the local operator's definition **in the current `.designer.ipynb` file** and adds it to the Operators menu. It works like any built-in operator: drag it onto the canvas, connect inputs, preview results.
+
+**Use local UDO when:**
+- A built-in operator cannot express the logic (e.g., custom calculation, API call, specialized parsing)
+- You need a quick, pipeline-specific custom operator
+- The logic is too complex for a Transform/Prepare formula but you want to stay visual
+- You're prototyping — local UDOs can later be promoted to shared UDOs
+
+**Local UDO management:**
+- Edit or delete via the operator's actions menu in the sidebar
+- You must remove every instance of the operator from the canvas before deleting its definition
+- Local UDOs are scoped to the current file only — for cross-file reuse, promote to a shared UDO
+
+#### 3b. Shared UDO (registered, cross-file reuse)
+
+For logic that is reused across multiple pipelines, register a shared UDO defined in a YAML file with the `user-defined-operator-v0.1.0` schema. Three types:
+
+| Shared UDO Type | Use For | Example |
 |---|---|---|
-| **`uc-udf`** | Row-level custom transform registered as a UC UDF | Currency conversion, address normalization, custom hash |
-| **`uc-udtf`** | Multi-row / stateful operation registered as a UC UDTF | ML model scoring, clustering, batch enrichment |
-| **`python-run-function`** | Standalone Python callable, no UC dependency | External API call, email notification, PDF generation |
+| **`python-run-function`** | DataFrame-level transforms, external integrations; no UC dependency | Email dispatch, API enrichment, SFTP push, PDF generation |
+| **`uc-udf`** | Row-level column transform backed by a UC scalar function | Currency conversion, address normalization, compound interest |
+| **`uc-udtf`** | Table-level transform backed by a UC table-valued function | ML scoring, K-means clustering, batch enrichment |
 
-**Promote to UDO when:**
+**Registration**: Shared UDOs are registered in `.user_defined_operators.yaml` placed at the workspace root (visible to all users) or in your user home folder (visible only to you). See § 2.15 for YAML schema and registration examples.
+
+**Promote local → shared when:**
 - The same logic appears in ≥2 pipelines (or is likely to)
 - The function already exists (or should exist) as a UC UDF/UDTF
 - The user has a library of reusable transforms (e.g., tax calculation, compliance rules)
 - The Alteryx workflow calls a `.yxi` Custom Tool with a known Python implementation
 
-**Do NOT promote to UDO when:**
-- The operation is expressible with a built-in operator (Transform, Aggregate, etc.)
-- The custom logic is one-off and pipeline-specific — use `python` instead
-
-**Registration**: UDOs are defined in `.user_defined_operators.yaml` in the workspace. The `template` field in the YAML docstring is the UDO's registered identifier (not a fixed value like `transform`). See § 2.15 for YAML examples.
+**Do NOT use a UDO when:**
+- The operation is expressible with a built-in operator (Transform, Aggregate, etc.) — built-ins always win
+- The logic is trivially one-off AND fits in a single `python` or `sql` node — but even then, consider a local UDO for visual clarity
 
 ### Priority 4: SQL (ONLY after the mandatory pre-check passes, and only for these specific patterns)
 
@@ -285,6 +329,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `transform` CASE WHEN for deterministic mappings |
 | `sql` JOIN to a ≤10-row lookup table for Find Replace | `transform` CASE WHEN — small finite mappings should stay visual |
 | Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 9 pre-check questions first; only then use `sql` |
+| Writing raw `python` for custom logic without considering a VDP UDO | First try **local UDO creation** from the sidebar (`+ Create user-defined operator` → describe it → Generate preview). If the logic will be reused across files, promote it to a shared UDO (`python-run-function`, `uc-udf`, or `uc-udtf`). See Priority 3 and §2.15. |
 | `sql` ROW_NUMBER for simple deduplication | Use visual `unique` operator — `unique_by_all_columns: false` + `columns` + optional `sort_expressions` |
 | `python` `spark.createDataFrame(...)` for small inline/lookup tables | Use visual `enter_data` operator with markdown-style table syntax |
 | `sql` COUNT(DISTINCT col) in GROUP BY | Use visual `aggregate` with `fn: COUNT_DISTINCT` — now natively supported |
@@ -300,8 +345,8 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Passing VARIANT columns to downstream Transform/Join operators | ai_parse_document and ai_extract return VARIANT. Designer preview fails with `UNSUPPORTED_OPERATION` on VARIANT. **Always CAST to STRING/DOUBLE/etc inline** in the same SQL — never let VARIANT flow downstream. |
 | `TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy')` on AI-extracted dates | AI-extracted dates often come in mixed formats (MM/dd/yyyy, yyyy-M-d, dd-MMM-yyyy). Use `COALESCE(TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy'), TRY_TO_TIMESTAMP(col, 'yyyy-M-d'), TRY_TO_TIMESTAMP(col, 'dd-MMM-yyyy'))` in a Transform. |
 | Reusable Python logic duplicated across pipelines | Promote to a **UDO** (`uc-udf` for row-level, `uc-udtf` for multi-row, `python-run-function` for external calls). Register once, reuse everywhere as a visual operator. |
-| `python` node calling a UC UDF via `spark.sql("SELECT my_udf(...)")` | Use a **`uc-udf` UDO** instead — it makes the function a drag-and-drop operator in the palette, with proper type checking and documentation. |
-| `sql` calling a UC UDTF via `SELECT * FROM my_udtf(TABLE(...))` | Use a **`uc-udtf` UDO** instead — wraps the UDTF as a visual operator with explicit input/output column mapping. |
+| `python` node calling a UC UDF via `spark.sql("SELECT my_udf(...)")` | Prefer a **UDO** instead — either generate a local UDO from the sidebar for this file, or register a shared **`uc-udf` UDO** if the function should be reused. |
+| `sql` calling a UC UDTF via `SELECT * FROM my_udtf(TABLE(...))` | Prefer a **UDO** instead — either generate a local UDO from the sidebar for this file, or register a shared **`uc-udtf` UDO** for reuse. |
 
 
 ---
@@ -663,19 +708,40 @@ See Step 11 for full handling.
 
 ### 2.15 User-Defined Operators (UDO)
 
-UDOs are a VDP-native feature for packaging reusable logic as a **first-class visual operator** that appears in the Designer palette. They are the preferred path for custom functions that are reused across pipelines — **always prefer a UDO over a raw `python` node** when the logic is reusable.
+UDOs are a VDP-native feature for packaging custom logic as a **first-class visual operator** that appears in the Designer palette. **Always prefer a UDO over a raw `python` or `sql` node** — even for one-off logic, a local UDO keeps the pipeline visual.
+
+#### Local UDO — AI-Generated (TRY THIS FIRST)
+
+The fastest way to create a custom operator. No YAML authoring needed:
+
+1. In the **Operators menu** (left sidebar), click **"+ Create user-defined operator"**
+2. Enter a **Description** of what the operator should do (e.g., "Calculate compound interest given principal, rate, and years") and optionally a **Name**
+3. Click **"Generate preview"** — Genie Code generates the operator's configuration and Python `run()` function
+4. Review the generated code → click **"Approve and create"**
+
+The operator is stored in the current `.designer.ipynb` file and immediately appears in the Operators menu. Drag it onto the canvas like any built-in operator.
+
+**Local UDO management:**
+- Edit or delete via the operator's actions menu (three-dot menu on the operator in the sidebar)
+- Must remove all instances from the canvas before deleting the definition
+- Scoped to the current file only — for cross-file reuse, promote to a shared UDO
+
+#### Shared UDO — Registered for Cross-File Reuse
+
+For logic used across multiple pipelines, define a YAML file with the `user-defined-operator-v0.1.0` schema and register it.
 
 #### When to create/use a UDO
 
-| Alteryx Pattern | UDO Subtype | Notes |
+| Alteryx Pattern | UDO Approach | Notes |
 |---|---|---|
-| Python Tool with a row-level formula already registered (or planned) as a UC UDF | `uc-udf` | Maps each input row through the UDF; output is a new column. Prefer over `python` when the function is already in UC. |
-| Python Tool performing ML scoring via an MLflow model | `uc-udtf` | UDTF accepts the full table, applies the model, returns scored rows. Cleaner and more reusable than `python` with `mlflow.pyfunc.load_model`. |
-| Python Tool calling an external API (e.g. Slack, email, enrichment service) | `python-run-function` | Standalone Python callable; no UC required. Keeps pipeline logic consistent without embedding credentials in a raw `python` cell. |
-| Custom Tool (`.yxi`) with a known Python implementation | `uc-udtf` or `python-run-function` | Assess whether the logic generalizes; if yes, register as UDO. If one-off, use a `python` node instead. |
-| Tax calculation / compliance formula reused across jurisdictions | `uc-udf` | Register once in UC, reuse across all tax pipelines. |
-| Data quality / validation rule library | `uc-udf` or `uc-udtf` | Standard DQ checks become drag-and-drop operators. |
-| R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first. |
+| Any tool with no built-in VDP equivalent | **Local UDO** (describe it → Generate preview) | Fastest path; stays visual; no YAML needed |
+| Python Tool with a row-level formula already registered as a UC UDF | **Shared `uc-udf`** | Maps each input row through the UDF; output is a new column |
+| Python Tool performing ML scoring via an MLflow model | **Shared `uc-udtf`** | UDTF accepts the full table, applies the model, returns scored rows |
+| Python Tool calling an external API (e.g. Slack, email, enrichment service) | **Shared `python-run-function`** | Standalone Python callable; no UC required |
+| Custom Tool (`.yxi`) with a known Python implementation | **Local UDO** (then promote to shared if reusable) | Describe the .yxi logic → generate → test |
+| Tax calculation / compliance formula reused across jurisdictions | **Shared `uc-udf`** | Register once in UC, reuse across all tax pipelines |
+| Data quality / validation rule library | **Shared `uc-udf` or `uc-udtf`** | Standard DQ checks become drag-and-drop operators |
+| R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first |
 
 #### UDO YAML templates
 
@@ -1844,6 +1910,19 @@ For external DB writes, use a `python` operator with `df.write.format("jdbc")` o
 
 Do not skip validation or assume the pipeline is correct without comparing against known-good output.
 
+### CRITICAL: Expected output is for VALIDATION ONLY — never part of the data flow
+
+> The expected output file MUST NOT be wired into the pipeline’s main data flow.
+> It is a reference for comparison only. Adding it as a regular node would contaminate the pipeline output.
+>
+> Correct placement:
+> - Load the expected output as a **separate `source` node** positioned BELOW the main flow
+> - Wire it ONLY to a `sql` validation node (alongside the actual pipeline output)
+> - The validation node returns a summary row (`validation_status`, `diff_rows`) — it does NOT feed the Output operator
+> - After validation passes, tell the user the result clearly and offer to remove the validation branch
+>
+> **Never remove it silently.** Always confirm with the user first: "Validation passed — MATCH, 0 diff rows. The validation branch (expected source + SQL check) is not part of the production data flow. Would you like me to remove it now, or keep it for ongoing spot-checks?"
+
 ### 10b. Upload expected output to a UC Volume
 
 Save the expected output file to the same UC Volume area as the source data, for example:
@@ -1852,11 +1931,58 @@ Save the expected output file to the same UC Volume area as the source data, for
 
 ### 10c. Add a validation source node
 
-Read the expected output as a separate `source` or `python` node (depending on format). Place it below the main pipeline flow at the same x-level as the final output.
+Read the expected output as a separate `source` or `python` node (depending on format). Place it **below** the main pipeline flow at the same x-level as the final output, but NOT wired to the Output operator.
 
-### 10d. Run structural validation (row counts by granularity)
+### 10d. Preferred validation pattern — SQL EXCEPT
 
-Add a `sql` validation node that compares row counts by key dimensions:
+The most reliable validation is an `EXCEPT` query that returns zero rows on a match. Add a `sql` node that compares the pipeline output against the expected output using set subtraction:
+
+```yaml
+- id: validation_check
+  template: sql
+  name: validation_check
+  config:
+    query: |
+      -- Align types in expected output as needed (e.g. int Company Code → lpad string)
+      WITH actual AS (
+        SELECT * FROM pipeline_output
+      ),
+      expected AS (
+        SELECT
+          lpad(CAST(`Company Code` AS STRING), 4, '0') AS `Company Code`,
+          -- <cast other mismatched columns here>
+          <remaining columns...>
+        FROM expected_output
+      ),
+      diff AS (
+        SELECT * FROM actual
+        EXCEPT
+        SELECT * FROM expected
+        UNION ALL
+        SELECT * FROM expected
+        EXCEPT
+        SELECT * FROM actual
+      )
+      SELECT
+        CASE WHEN COUNT(*) = 0 THEN 'MATCH' ELSE 'DIFF' END AS validation_status,
+        COUNT(*) AS diff_rows
+      FROM diff
+  input:
+    - node: <sort_or_final_transform_node>
+      input_port: data
+      output_port: sorted_data
+    - node: <expected_source_node>
+      input_port: data
+      output_port: data
+```
+
+**Type alignment in the expected output is common.** Alteryx CSVs often export numeric IDs as integers while the pipeline produces zero-padded strings (e.g. `1` vs `"0001"`). Fix these in the `WITH expected AS (...)` CTE before the EXCEPT, not by changing the pipeline output.
+
+**Preview the validation node.** The result should be a single row: `validation_status=MATCH, diff_rows=0`. If it shows DIFF, inspect which rows differ before assuming a logic error — column type mismatches are the most common cause.
+
+### 10d-alt. Run structural validation (row counts by granularity)
+
+For complex pipelines where EXCEPT is impractical, add a `sql` validation node that compares row counts by key dimensions:
 
 ```yaml
 - id: validation_row_counts
@@ -1984,10 +2110,46 @@ Always emit a `markdown` node that lists the manual steps and the macro path it 
 | Predictive (text/sentiment/classification) | Emit `ai_function` first; fall back to `python` only if labels are dynamic | **READY** |
 | Time Series | Emit `python` with Prophet/statsmodels + MLflow | **REVIEW** |
 | Spatial | Emit `python` with Sedona; if Sedona not enabled, mark **MANUAL** | **REVIEW / MANUAL** |
-| Reporting (Render/Email/Chart/Map) | Out of scope — point user at Lakeview / Job email | **MANUAL** |
+| Reporting (Render/Email/Chart/Map) | Two concrete options for email; Lakeview for visual reports | **MANUAL** (see below) |
 | Interface (Text Box, Drop Down, etc.) | Out of scope — point user at Job parameters / App | **MANUAL** |
 
 For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing what was skipped and how the user should complete it.
+
+### Email Dispatch — Two Concrete Options
+
+Alteryx workflows frequently end with Email tools that send per-recipient HTML reports. VDP has no native email operator, but two well-tested replacement patterns exist. **Always present both options to the user and let them choose.**
+
+#### Option 1: In-Pipeline Python Operator
+
+Add a `python` operator at the end of the pipeline (after the Output node) that:
+1. Reads the materialized snapshot table and recipients config table
+2. Joins on company_code + cost_center to match recipients to their data
+3. Builds per-recipient HTML reports with CSS-styled tables
+4. Sends via SMTP (using `smtplib` + `email.mime`)
+
+**Pros:** Self-contained — the entire pipeline + email runs as one unit. Simple to maintain.
+**Cons:** Email logic is embedded in the VDP pipeline. SMTP credentials must be stored in Databricks Secrets and referenced in the code. If email fails, the entire pipeline run shows as failed even though data was written successfully.
+
+**UDO candidate:** If email dispatch is reused across multiple pipelines, promote the Python email logic to a `python-run-function` UDO. Register it once in `.user_defined_operators.yaml` and use it as a drag-and-drop operator in any pipeline.
+
+#### Option 2: Job-Chained Notebook
+
+Create a separate notebook that:
+1. Reads the materialized snapshot table and recipients config table
+2. Contains the same join/HTML/SMTP logic as Option 1
+3. Runs as **Task 2** in a Lakeflow Job where **Task 1** is the VDP pipeline
+
+**Pros:** Clean separation — data pipeline and email dispatch are independent tasks. Email failure doesn’t mark the data write as failed. Notebook is easier to debug/test independently. Can add retry logic at the Job level.
+**Cons:** Requires a Lakeflow Job to orchestrate the two tasks. Slightly more setup.
+
+**Notebook requirements:**
+- Dev-setup cell: guarded table creation for standalone testing (needs `delta.columnMapping.mode = 'name'` if column names have spaces)
+- SMTP config cell: reads credentials from a Databricks Secret scope (e.g., `dbutils.secrets.get('email', 'smtp_password')`)
+- `DRY_RUN = True` flag for safe testing
+- HTML builder with CSS styling, threshold breach highlighting
+- Main loop: groups by recipient email, builds and sends per-recipient reports
+
+Always emit a `markdown` node in the pipeline documenting which option was chosen and linking to the companion notebook if Option 2.
 
 ---
 
@@ -2038,6 +2200,11 @@ For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing w
 | Join@1.0.0 `expressions: []` duplicates columns | `DLTAnalysisException: duplicate column name` or `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on output | Always set explicit expressions: `["left.*", "right.needed_col"]`, excluding the right-side join key |
 | Output v4.0.0 preview fails with TABLE_OR_VIEW_NOT_FOUND | Preview only does `SELECT * FROM target` — does NOT write | Expected on first run. The actual write happens on Run All. Same for file outputs. Do not "fix" this. |
 | Mixed AI-extracted date formats | `TRY_TO_TIMESTAMP` returns NULL for non-matching formats | Use COALESCE with multiple format patterns in a Transform |
+| Delta column names with spaces | `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on write | VDP Output operator handles this automatically via column mapping. But companion notebooks (e.g., email sender) writing to the same table must explicitly set `.option("delta.columnMapping.mode", "name")` on `saveAsTable()`. This upgrades the table to minReaderVersion=2, minWriterVersion=5. Rename columns to snake_case early in the pipeline to avoid this entirely. |
+| Compute context isolation | Tables written via serverless VDP Designer may not be immediately visible on classic clusters | Serverless and classic compute use separate metastore caches. After VDP `Run All`, a classic cluster notebook may need `REFRESH TABLE catalog.schema.table` or a fresh `spark.table()` call. For job-chained workflows, use the same compute type for both tasks. |
+| Conditional aggregation decomposition | Alteryx finance workflows use Filter → multiple Summarize branches for version-specific measures | Instead of separate Filter+Aggregate chains per version code, use a single **Prepare** operator with CASE WHEN columns (e.g., `CASE WHEN version = 'ACT' AND month <= 8 THEN amount ELSE 0 END AS actual_ytd`) followed by one **Aggregate**. This reduces N filter+aggregate pairs to 2 operators. See §15g. |
+| Workflow triage by tool category | 60-80% of Alteryx tool count may be MANUAL (PortfolioComposer, Email, Browse) | Count tools by category FIRST before estimating conversion effort. Reporting/email/browse tools are all MANUAL but inflate tool counts dramatically. Focus effort on the data-flow tools (Filter, Formula, Join, Summarize). |
+| UDO not yet registered | Pipeline references a UDO template that doesn't exist in `.user_defined_operators.yaml` | The pipeline will fail at parse time with an unknown template error. Always verify UDO registration before referencing. Emit a `markdown` note with registration instructions. |
 
 ---
 
@@ -2126,6 +2293,73 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 
 **Rule of thumb**: A well-optimized VDP pipeline should have ~60-65% of the cell count of a faithful 1:1 conversion.
 
+### 15g. Finance workflow patterns
+
+Corporate finance Alteryx workflows (cost center reporting, budget vs actuals, P&L snapshots) share recurring patterns that map well to VDP once decomposed correctly.
+
+#### Conditional aggregation with version codes and YTD cutoffs
+
+Finance data often has a `Version Code` column (ACT, BUD, FC1, FC3, etc.) and `Year`/`Month` columns. The workflow computes YTD (year-to-date) and FY (full-year) totals per version. Alteryx typically implements this as separate Filter → Summarize chains per version.
+
+**VDP pattern (2 operators instead of N×2):**
+
+1. **Prepare** operator with CASE WHEN columns that flag each measure:
+   ```
+   CASE WHEN `Version Code` = 'ACT' AND Month <= <max_act_month> THEN `Amount` ELSE 0 END AS actual_ytd
+   CASE WHEN `Version Code` = 'BUD' AND Month <= <max_act_month> THEN `Amount` ELSE 0 END AS budget_ytd
+   CASE WHEN `Version Code` = 'BUD' THEN `Amount` ELSE 0 END AS budget_fy
+   -- repeat for FC1, FC3, etc.
+   ```
+
+2. **Aggregate** operator: GROUP BY company_code, cost_center; SUM all measure columns.
+
+This replaces 4-8 separate filter+aggregate chains with just 2 operators and produces all measures in one pass.
+
+**Key insight:** The YTD cutoff month for all versions equals the maximum month available for ACT data (e.g., if ACT has months 1-8, then YTD for BUD/FC1/FC3 is also months 1-8). The FY totals include all 12 months.
+
+#### Join key prefixing for multi-table scenarios
+
+When multiple reference tables (master data, hierarchy, recipients) join to a fact table on similar keys (company_code, cost_center), column name collisions are inevitable after joins.
+
+**VDP pattern:**
+1. **Prepare** operator on each reference table: pad keys AND prefix with table abbreviation:
+   - Master data: `m_company_code`, `m_cost_center`
+   - Hierarchy: `h_cost_center`
+   - Recipients: `r_company_code`, `r_cost_center`
+2. **Transform** (select) operator between Prepare and Join: select ONLY the columns needed from each reference table to avoid carrying unnecessary columns through the join chain.
+3. **Join** operators: use prefixed keys in join conditions (`left.company_code = right.m_company_code AND left.cost_center = right.m_cost_center`).
+4. Use explicit `expressions` in Join config to exclude the prefixed join keys from the output (they’re duplicates of the fact table keys).
+
+#### Threshold comparison logic
+
+Budget threshold workflows compare actual spend against budget or forecast and flag breaches:
+
+```
+Threshold Comparator: CASE WHEN actual_ytd > budget_ytd THEN 'FC3' ELSE 'BUD' END
+Threshold Comparison: ROUND(actual_ytd / NULLIF(fc3_fy_or_budget_fy, 0), 4)
+Over Threshold:       CASE WHEN comparison > threshold_pct / 100.0 THEN 'Yes' ELSE 'No' END
+```
+
+This belongs in a single **Prepare** operator with all three formulas as sequential actions. Use `NULLIF(denominator, 0)` to avoid division-by-zero errors.
+
+#### Cost center code formatting
+
+Finance systems often use composite keys like `0001/000100` (company_code/cost_center). In VDP:
+```
+CONCAT(LPAD(CAST(company_code AS STRING), 4, '0'), '/', LPAD(CAST(cost_center AS STRING), 6, '0')) AS cost_center_code
+```
+This is a **Prepare** formula action, not SQL.
+
+#### Workflow triage by tool category
+
+Before starting conversion, count Alteryx tools by category. A typical finance workflow has:
+- **Data flow tools** (10-30%): Filter, Formula, Join, Summarize, Select, Sort — these are the actual work
+- **Reporting tools** (40-60%): PortfolioComposerText, PortfolioComposerLayout, PortfolioComposerTable — all MANUAL (Lakeview)
+- **Email tools** (10-20%): Email nodes — all MANUAL (see Step 12 email options)
+- **Utility tools** (5-10%): Browse, BlobInput/BlobOutput — omit or MANUAL
+
+**Focus conversion effort on data flow tools first.** The MANUAL tools inflate the tool count but don’t require pipeline logic — they’re handled by downstream Lakeview dashboards, email notebooks, or Lakeflow Job orchestration.
+
 ---
 
 ## Conversion Checklist
@@ -2151,6 +2385,7 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
 - [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
 - [ ] Python operators assessed for UDO promotion (reusable logic → `uc-udf` / `uc-udtf` / `python-run-function`)
+- [ ] Unsupported patterns checked for **local UDO** feasibility FIRST (`+ Create user-defined operator` → Generate preview), then shared UDO feasibility, BEFORE falling back to raw `python` or `sql` (Step: Unsupported Patterns rule §2)
 - [ ] Filter operators use v2.0.0 when both T/F branches are needed (filtered_data + excluded_data)
 - [ ] Join operators use split_join when Alteryx L/J/R outputs are all needed (3 output ports)
 - [ ] Aggregate operators use COUNT_DISTINCT, FIRST, LAST, CONCAT where applicable (no SQL needed)
@@ -2178,4 +2413,10 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 - [ ] Pipeline tested end-to-end
 - [ ] Layout is clean and readable (horizontal flow, no overlaps)
 - [ ] Top-level `markdown` documents pipeline purpose and any MANUAL items
+- [ ] Expected output file used for VALIDATION ONLY — never wired into the main data flow (Step 10 critical rule)
+- [ ] Delta column mapping mode set in companion notebooks when column names have spaces (`delta.columnMapping.mode = 'name'`)
+- [ ] Conditional aggregation uses Prepare (CASE WHEN flags) → Aggregate pattern, not separate Filter+Aggregate chains per version (§15g)
+- [ ] Join key prefixes used for multi-table scenarios to avoid column collisions (§15g)
+- [ ] Email dispatch option documented in pipeline `markdown` node (Option 1: in-pipeline Python/UDO, Option 2: job-chained notebook) (Step 12)
+- [ ] Workflow triaged by tool category before conversion — MANUAL tools (reporting/email/browse) counted separately from data-flow tools (§15g)
 
