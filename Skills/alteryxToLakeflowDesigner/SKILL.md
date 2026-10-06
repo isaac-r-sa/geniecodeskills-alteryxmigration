@@ -2419,4 +2419,96 @@ Before starting conversion, count Alteryx tools by category. A typical finance w
 - [ ] Join key prefixes used for multi-table scenarios to avoid column collisions (§15g)
 - [ ] Email dispatch option documented in pipeline `markdown` node (Option 1: in-pipeline Python/UDO, Option 2: job-chained notebook) (Step 12)
 - [ ] Workflow triaged by tool category before conversion — MANUAL tools (reporting/email/browse) counted separately from data-flow tools (§15g)
+- [ ] Complex multi-source flows (>5 inputs) use a single Python operator rather than a visual join chain (§15h)
+- [ ] Python operator input ordering documented at top of code block (§15h)
+- [ ] Orphaned visual operators cleaned up after Python consolidation (§15h)
+- [ ] Undocumented Alteryx business rules flagged in pipeline markdown note (§15h)
+
+---
+
+## Step 15h: Complex Multi-Source Transformations (PPV / Financial Projections)
+
+### Lessons learned from PPV Projection migration (10-source, 83-column financial workflow)
+
+When an Alteryx workflow joins 5+ source tables with conditional logic, FX cross-rates, and cascading lookups, visual join/transform/prepare chains become impractical. The following patterns apply.
+
+### 15h-1. Go straight to Python for complex multi-source logic
+
+If the Alteryx workflow has >5 inputs with conditional joins, currency cross-rates, or cascading lookups, skip the visual join chain and use a single Python operator from the start. Building an intermediate chain of Rename → Join → Join → Prepare operators wastes effort — the visual operators cannot express the full conditional logic and will be replaced by a Python operator anyway.
+
+**Threshold rule:** If the Alteryx canvas has ≥5 source nodes feeding into a convergence point with conditional column derivation (e.g., "use PO price if available, else PIR, else Invoice"), emit a single Python operator that reads all sources via `inputs["data"][0..N]`.
+
+### 15h-2. Document Python operator input ordering
+
+When a Python operator uses `inputs["data"][0]`, `inputs["data"][1]`, etc., the order depends on the YAML `input` list. One reorder silently breaks everything. Always add a comment block at the top of the Python code mapping index to source:
+
+```python
+# Input mapping (order must match YAML input list):
+# inputs["data"][0] = Standard Price (source_1dfd991a)
+# inputs["data"][1] = Material Master (source_4302b10c)
+# inputs["data"][2] = PO Deliveries (source_38e5b80a)
+# inputs["data"][3] = Price Invoices (source_53ad6af0)
+# ...
+```
+
+### 15h-3. FX cross-rate pattern
+
+Currency conversion via an intermediary (typically EUR) is common in SAP-sourced Alteryx flows. It requires 3 self-joins on the same FX rate table — one per currency role:
+
+| Self-join alias | Join keys | Purpose |
+|---|---|---|
+| fx_company | year, month, company_currency | Company currency → EUR rates |
+| fx_invoice | year, month, invoice_currency | Invoice/document currency → EUR rates |
+| fx_leading | year, month, leading_doc_currency | Leading document currency → EUR rates |
+
+Cross-rate formula: `FX_cross = source_to_EUR / target_to_EUR`, with a same-currency fallback of 1.0.
+
+PPV formula: `PPV = (doc_price × FX_cross_rate − standard_price) × quantity`
+
+For EUR-denominated PPV: `PPV_EUR = (doc_price × doc_to_EUR − std_price × company_to_EUR) × quantity`
+
+### 15h-4. SAP FISCPER period decoding
+
+SAP fiscal period encoding (e.g., 2026008) appears in nearly every SAP-sourced Alteryx flow:
+
+```python
+year = FISCPER // 1000        # 2026008 → 2026
+month = (FISCPER % 1000) + 1  # 2026008 → 9 (period 9)
+period_label = f"{year}-P{month:02d}"  # "2026-P09"
+```
+
+The +1 offset is easy to miss — the FISCPER month field is 0-indexed relative to the fiscal year start.
+
+### 15h-5. Expect undocumented Alteryx business rules
+
+Alteryx workflows frequently contain hidden logic that is not documented in any PowerPoint, README, or source file. These only surface during validation against expected output.
+
+Common examples:
+- Hardcoded adjustment factors (e.g., 0.9 multiplier for specific company codes)
+- Conditional price source overrides not visible in the Alteryx XML
+- Period-specific rounding or truncation rules
+- Company-code-specific currency handling exceptions
+
+**Action:** When validation shows a systematic discrepancy (e.g., all rows for one company code are ~11% off), document it in the pipeline `markdown` note with the observed ratio and possible causes. Do not silently adjust values to match — flag the gap for the business owner to confirm.
+
+### 15h-6. Validation belongs outside the production pipeline
+
+Expected output files are for migration validation only. They should NOT be wired as source operators in the production pipeline. Run validation in a separate notebook or one-off SQL comparison, then remove all validation-related operators before finalizing the pipeline.
+
+This reinforces Step 10h: clean up after validation.
+
+### 15h-7. Clean up orphaned operators after Python consolidation
+
+When a Python operator replaces a visual join chain, the original Rename Transform → Join → Join → Prepare operators become orphaned (disconnected from the dataflow). These must be deleted to avoid confusion:
+
+1. Identify all operators whose output is no longer consumed by any downstream node
+2. Delete them from the notebook cells (they are individual cells in the .designer.ipynb)
+3. Verify the remaining pipeline has no broken input references
+
+### 15h-8. UDO assessment for complex migrations
+
+In a multi-source financial migration:
+- The core transformation Python operator is NOT a good UDO candidate (too domain-specific, too many inputs, not reusable)
+- A dataset validation/comparison operator IS a good UDO candidate — a generic "Compare two DataFrames by key with configurable column tolerances" operator is reusable across migration projects
+- FX cross-rate calculation COULD be a UDO if the same currency conversion pattern appears across multiple pipelines
 
