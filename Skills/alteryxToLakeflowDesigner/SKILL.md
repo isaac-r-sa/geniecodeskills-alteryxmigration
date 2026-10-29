@@ -499,6 +499,46 @@ UDOs are reusable visual operators backed by Unity Catalog functions or standalo
    - Containers (Tool Container) and comments — preserve as `group` / `markdown`
    - Macros referenced — note `.yxmc` paths; handle per Step 11
    - Interface tools — note presence; handle per Step 12
+   - Execution engine (AMP vs classic E1) — see Step 1a
+   - Join→Union idioms that are really outer joins — see Step 1b
+
+### Step 1a: Execution engine — AMP (E2) workflows are fully convertible
+
+**AMP is never a blocker. Do not refuse, defer, or mark a workflow MANUAL because it ran on AMP.**
+
+AMP (Alteryx Multi-threaded Processing, internally "E2") is a runtime engine setting, not a tool or a file format. The tool XML (`<Node>`, `<Configuration>`, `<Connection>`) is identical to a classic-engine (E1) workflow, so every mapping in Step 2 applies unchanged.
+
+**Detection** — any of these means the workflow ran on AMP:
+- `<AlteryxDocument ... RunE2="T">` on the root element
+- `<RunWithE2 value="True" />` under the workflow-level `<Properties>`
+
+**Do not confuse with the `.yxdb` "e2 Database" warning** (Step 3). That warning concerns *reading* `.yxdb` files written in the newer binary format. It has nothing to do with the `RunE2` flag, and it never applies to `.yxdb` *outputs*.
+
+**What AMP actually changes, and how to handle it.** The only material difference is that AMP does not guarantee record order between tools. Spark SQL does not guarantee order either, so the conversion is naturally faithful. Check for order-sensitive tools:
+
+| Order-sensitive Alteryx tool / setting | Action in the conversion |
+|---|---|
+| Sample / First N / Last N, Select Records | Add an explicit `sort` upstream on a business key; tell the user the Alteryx result was itself non-deterministic under AMP unless sorted |
+| Unique (which duplicate is kept) | Set `sort_expressions` on the `unique` operator |
+| Multi-Row Formula, Running Total, Record ID, Tile | Use an explicit `ORDER BY` in the window function; ask the user for the intended order if the Alteryx workflow had no Sort |
+| Summarize First / Last / Concatenate | Sort upstream; for Concatenate use `array_join(array_sort(collect_list(x)), sep)` if order matters |
+| Union "Output Order" / Join output order | Ignore — only affects row order; add a final `sort` only if the user needs a stable file order |
+
+If none of these tools are present, state in the documentation that "AMP has no semantic effect on this workflow" and continue.
+
+**Validation under AMP**: always compare expected vs. actual output **as sets** (order-insensitive, e.g. `EXCEPT ALL` both ways or a full outer join on a key), and compare floating-point columns with a tolerance (AMP and E1 can differ in the last digits of doubles and fixed decimals).
+
+### Step 1b: Join→Union idioms (collapse into one join)
+
+Alteryx users often write outer joins as a Join whose outputs are re-unioned. Detect the pattern from `<Connection>` elements where two or more outputs of the same Join feed the same Union:
+
+| Join outputs wired into one Union | Equivalent | Emit |
+|---|---|---|
+| `Join` + `Left` | LEFT OUTER JOIN | one `join` with `join_type: left` |
+| `Join` + `Right` | RIGHT OUTER JOIN | one `join` with `join_type: right` |
+| `Join` + `Left` + `Right` | FULL OUTER JOIN | one `join` with `join_type: full` |
+
+Collapse each Join+Union pair into a single `join` node; do NOT emit `split_join` + `combine`. Keep the Join's embedded `SelectConfiguration` (renamed/deselected right-side fields, `Right_` prefixes) as the join's explicit `expressions`. A Union in "By Name" mode fills missing right-side columns with NULL for the `Left` rows, which is exactly the left-join behavior. When the same lookup table is joined many times on different keys (for example, a select-list/value-list table joined once per code column), keep one `join` per key and alias the lookup each time; mention in the docs that one `sql` with N `LEFT JOIN`s is an equivalent alternative.
 
 ---
 
@@ -512,6 +552,7 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 |---|---|---|
 | Input Data (file) | `source` (file_source) | UC Volume path; `format` from extension |
 | Input Data (DB / ODBC / OLEDB) | `source` (table_source) or `python` (JDBC) | Use UC Connections / Lakehouse Federation when possible |
+| Input Data (DCM / ODBC connection **to Databricks**) | `source` (table_source) or `sql` | The data is **already in Unity Catalog** — this is NOT a third-party source, do not STOP. Detect via `UseDcm="true"` with a `DcmSchemaId` containing `databricks` (e.g. `database-odbc-dsn-databricks-simba-oauth-azure-...`), or a `<Query>` that references three-part `catalog.schema.table` names. Plain `SELECT *` → `source` table_source. Query with a WHERE/JOIN → `sql` with the original query (Databricks SQL dialect already). Dynamic date filters (e.g. `current_date()`) → pipeline parameter, see Step 4 "Dynamic date filters". If the user is migrating to a different workspace/catalog, ask for the target catalog/schema mapping. |
 | Output Data (table) | `output` | `output_type: table`, catalog + schema + table_name, `write_mode: overwrite/append/merge`. Merge upserts by `merge_keys`. |
 | Output Data (file — CSV/JSON/Excel) | `output` (file mode) | `output_type: file`, `file_type: csv/json/excel`, `write_mode: overwrite/append`. Supports **Excel (.xlsx) natively** — no Python needed for simple data dumps. Fall back to `python` only for multi-sheet workbooks, formatted output, or template injection. |
 | Browse | *omit* | Browse is just a preview tile — no VDP analog needed |
@@ -522,7 +563,7 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Input Data (.xlsx — specific sheet/range/named range) | `python` | `pandas.read_excel(sheet_name=, usecols=, skiprows=, nrows=, header=)`; see §4 Excel Ingest Patterns |
 | Input Data (.xls legacy) | `python` | `pandas.read_excel(engine='xlrd')`; see §4 Excel Ingest Patterns |
 | Output Data (.xlsx — simple) | **`output`** (file mode) | `output_type: file`, `file_type: excel`, `write_mode: overwrite/append` — **native, no Python** |
-| Output Data (.xlsx — multi-sheet/formatted/template) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns |
+| Output Data (.xlsx — multi-sheet/formatted/template, or a required sheet name like `file.xlsx\|\|\|BaseData`) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns. Serverless environment v5 does **not** ship `openpyxl` (`ModuleNotFoundError`): declare it in the notebook's `environmentMetadata.dependencies: ["openpyxl"]`. Write to a local temp file, then `shutil.copyfile` to the Volume. `python` (and `sql`) operators receive `inputs["data"]` as a **list** plus `data__sources`, so wire them that way even with one upstream. |
 | Output Data (materialized view) | `output` (MV mode) | `output_type: materialized_view` — publishes as an MV in UC, refreshes on each run |
 | Input Data (PDF — form/document) | `sql` or `python` | `ai_parse_document()` → `ai_extract()` chain; see §4 PDF Parse Patterns |
 | Map Input | **MANUAL** | Designer-only; replace with a Volume-hosted file |
@@ -554,6 +595,7 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 
 | Alteryx Tool | VDP Operator | Notes |
 |---|---|---|
+| Join → Union (J+L / J+R / J+L+R into the same Union) | `join` (left / right / full) | Outer-join idiom — collapse the pair into ONE join; see Step 1b |
 | Join | `join` | Designer Join now supports `split_join` mode with **three output ports**: `joined_data` (matched), `left_unmatched`, `right_unmatched` — this maps **directly** to Alteryx's L/J/R outputs. Also supports Inner / Left / Right / Full. Use `split_join` as default for Alteryx Join conversions. No need for LEFT ANTI/RIGHT ANTI SQL workarounds. |
 | Join Multiple | chain of `join` | Or one `sql` with multi-table FROM |
 | Append Fields (cross join) | `sql` | Designer Join has no cross-join — emit `SELECT * FROM left CROSS JOIN right`. |
@@ -866,7 +908,8 @@ When converting a `python` operator, always ask:
 | **Stat packages** | SAS `.sas7bdat` | `python` | `spark-sas7bdat` connector or `pandas`+`pyreadstat` for small files |
 | | SPSS `.sav` | `python` | `pandas`+`pyreadstat` |
 | | R `.rds` | `python` | `pyreadr.read_r` |
-| **Alteryx native** | `.yxdb` | **MANUAL** | Proprietary binary. The Python `yxdb` library fails on newer "e2 Database" format files. Workarounds: (a) ask user to export from Alteryx to CSV/Parquet, (b) if an expected output file exists, extract historical `.yxdb` data from it via column alignment, (c) use the original `.xlsx`/`.csv` source if the `.yxdb` was just an intermediate cache. Always save extracted data as CSV to a UC Volume. |
+| **Alteryx native** | `.yxdb` **output** | `output` (table) | Not MANUAL. A `.yxdb` output is just Alteryx's local cache format — replace with a UC Delta table (`output_type: table`). Applies equally to AMP/E2 workflows. |
+| **Alteryx native** | `.yxdb` **input** | **MANUAL** | Proprietary binary. The Python `yxdb` library fails on newer "e2 Database" format files. Workarounds: (a) ask user to export from Alteryx to CSV/Parquet, (b) if an expected output file exists, extract historical `.yxdb` data from it via column alignment, (c) use the original `.xlsx`/`.csv` source if the `.yxdb` was just an intermediate cache. Always save extracted data as CSV to a UC Volume. |
 | | `.yxmd` | n/a | The workflow itself — input to this skill |
 | | `.yxmc` | see Step 11 | Macro definition |
 | | `.yxi` | **MANUAL** | Packaged tool; not data |
@@ -913,6 +956,14 @@ Under the hood, Designer's Source compiles `file_source` into `SELECT * FROM rea
 
 - Paths like `file:/Workspace/Users/user@company.com/...` FAIL on full reads — the `@` causes URI authority errors.
 - **Workaround**: Always copy source files to a UC Volume first.
+
+### Dynamic date filters in source queries
+
+In-DB / DCM input queries often filter on the run date, for example `WHERE ReportingMonth = date_format(date_trunc('month', current_date()), 'yyyy-MM-dd')`. Converting this literally makes the pipeline untestable on historical, sample, or dummy data (it returns 0 rows whenever the data does not contain the current period).
+
+- Replace the run-date expression with a pipeline parameter (e.g. `:reporting_month`) whose **default reproduces the Alteryx behavior** (current month), so production semantics are unchanged.
+- Before validating, check which periods actually exist in the source (`SELECT DISTINCT ReportingMonth ...`) and run validation with the parameter set to a period that has data. Tell the user which value you used.
+- Document the parameter and its default in the workflow documentation.
 
 ### Dynamic Table References (Parameterized Pipelines)
 
@@ -2173,7 +2224,9 @@ Always emit a `markdown` node in the pipeline documenting which option was chose
 | Config stripping | Python/SQL configs reset to `{}` or `expressions: []` | Never change template type; recreate operator instead |
 | `TRY_CAST` in `transform` | Edits silently revert to `CAST` | Use a `filter` upstream, or use `sql` instead |
 | SQL view names with spaces | `TABLE_OR_VIEW_NOT_FOUND` | Rename operators to simple snake_case names |
-| `.yxdb` files | Alteryx proprietary binary; `yxdb` Python lib fails on "e2 Database" format | Ask user to export to CSV/Parquet first; or extract subset from expected output file |
+| `.yxdb` input files | Alteryx proprietary binary; `yxdb` Python lib fails on "e2 Database" format | Ask user to export to CSV/Parquet first; or extract subset from expected output file. (`.yxdb` outputs → Delta table; the `RunE2`/AMP engine flag is unrelated — see Step 1a) |
+| Workflow ran on AMP (`RunE2="T"`) | Mistaken for an unsupported format | Never a blocker — convert normally; handle order-sensitive tools per Step 1a |
+| 10+ Join→Union pairs (J+L into Union) | Verbose DAG that looks like split joins | Each pair is a LEFT JOIN — collapse per Step 1b |
 | Alteryx FixedDecimal precision | Numeric values differ ~0.04-1.7% vs expected output | Accept tolerance; verify structure (row counts, granularity types) rather than exact numeric match |
 | Excel source with NaN/blank cells | NULL columns for future periods in CYTD reports | Correctly handled — stable assortment filters exclude NULLs; no action needed |
 | Fan-out to 10+ Summarize/Join pairs | Verbose DAG; many intermediate Alteryx nodes | Consolidate into one `sql` per logical branch (e.g. Retail, Cost) using UNION ALL across granularities; remove downstream sort/rename transforms; see §15b and §15f |
@@ -2366,7 +2419,11 @@ Before starting conversion, count Alteryx tools by category. A typical finance w
 
 - [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
 - [ ] Each tool converted to a VDP operator OR explicitly flagged **MANUAL/REVIEW**
-- [ ] All input file formats handled per Step 3 (and `.yxdb` flagged for export)
+- [ ] Execution engine checked (Step 1a): AMP/`RunE2` workflows converted normally; order-sensitive tools given an explicit sort
+- [ ] Join→Union outer-join idioms collapsed into single `join` nodes (Step 1b)
+- [ ] DCM/ODBC inputs that point at Databricks treated as UC tables, not third-party sources
+- [ ] Run-date filters in source queries parameterized, with a default that matches Alteryx
+- [ ] All input file formats handled per Step 3 (`.yxdb` *inputs* flagged for export; `.yxdb` *outputs* → Delta table)
 - [ ] Excel ingest uses native `source` operator when possible (full file, single sheet, Excel File Format Support enabled); Python only for sheet/range/named range or legacy formats
 - [ ] JSON/CSV file outputs use native `output` operator (not Python)
 - [ ] Excel write-back is a secondary sink AFTER Delta output (Step 9a) — never the only output
