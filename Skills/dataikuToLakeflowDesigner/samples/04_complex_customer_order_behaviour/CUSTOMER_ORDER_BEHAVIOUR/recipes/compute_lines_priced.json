@@ -1,0 +1,39 @@
+{
+  "type": "join",
+  "neverRecomputeExistingPartitions": false,
+  "inputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "orders",
+          "deps": []
+        },
+        {
+          "ref": "order_lines",
+          "deps": []
+        },
+        {
+          "ref": "products",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "lines_priced",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "params": {},
+  "customMeta": {
+    "kv": {}
+  },
+  "versionTag": {
+    "versionNumber": 3
+  }
+}

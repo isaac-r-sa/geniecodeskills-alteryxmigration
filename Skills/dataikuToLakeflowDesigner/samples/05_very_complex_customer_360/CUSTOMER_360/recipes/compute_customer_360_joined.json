@@ -1,0 +1,43 @@
+{
+  "type": "join",
+  "neverRecomputeExistingPartitions": false,
+  "inputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "customers_prepared",
+          "deps": []
+        },
+        {
+          "ref": "recent_orders",
+          "deps": []
+        },
+        {
+          "ref": "sessions_by_customer",
+          "deps": []
+        },
+        {
+          "ref": "event_pivot",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "customer_360_joined",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "params": {},
+  "customMeta": {
+    "kv": {}
+  },
+  "versionTag": {
+    "versionNumber": 3
+  }
+}

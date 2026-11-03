@@ -1,0 +1,83 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FillEmptyWithValue",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "orders_6m",
+          "revenue_6m",
+          "sessions",
+          "total_events",
+          "checkout_sessions",
+          "add_to_cart_count",
+          "checkout_count",
+          "view_count"
+        ],
+        "value": "0"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "days_since_last_order",
+        "expression": "if(isBlank(last_order_date), -1, diff(asDate(\"${analysis_end}\"), last_order_date, \"days\"))"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "conversion_rate",
+        "expression": "if(view_count > 0, round(checkout_count / view_count * 10000) / 10000, 0)"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "engagement_tier",
+        "expression": "if(revenue_6m >= 500 && sessions >= 3, \"HIGH\", if(revenue_6m >= 100 || sessions >= 1, \"MEDIUM\", \"LOW\"))"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "RoundProcessor",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "avg_session_minutes"
+        ],
+        "mode": "ROUND",
+        "places": 1
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

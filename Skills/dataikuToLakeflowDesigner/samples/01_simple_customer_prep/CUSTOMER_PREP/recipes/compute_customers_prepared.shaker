@@ -1,0 +1,173 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "first_name",
+          "last_name",
+          "email",
+          "country",
+          "segment"
+        ],
+        "mode": "TRIM"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "email"
+        ],
+        "mode": "TO_LOWER"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "country",
+          "segment"
+        ],
+        "mode": "TO_UPPER"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FillEmptyWithValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "segment"
+        ],
+        "value": "UNKNOWN"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "DateParser",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "signup_date"
+        ],
+        "formats": [
+          "dd.MM.yyyy",
+          "yyyy-MM-dd"
+        ],
+        "lang": "auto",
+        "timezone_id": "UTC",
+        "outCol": "signup_date_parsed"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "full_name",
+        "expression": "first_name + \" \" + last_name",
+        "errorColumn": ""
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "customer_type",
+        "expression": "if(segment == \"CORP\" || segment == \"SMB\", \"B2B\", \"B2C\")",
+        "errorColumn": ""
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FilterOnValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "status"
+        ],
+        "values": [
+          "A"
+        ],
+        "matchingMode": "FULL_STRING",
+        "normalizationMode": "EXACT",
+        "action": "KEEP_ROW"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "ColumnsSelector",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "customer_id",
+          "full_name",
+          "email",
+          "country",
+          "segment",
+          "customer_type",
+          "signup_date_parsed"
+        ],
+        "keep": true
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "ColumnRenamer",
+      "params": {
+        "renamings": [
+          {
+            "from": "signup_date_parsed",
+            "to": "signup_date"
+          }
+        ]
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

@@ -1,0 +1,70 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FilterOnValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "status"
+        ],
+        "values": [
+          "COMPLETED",
+          "RETURNED"
+        ],
+        "matchingMode": "FULL_STRING",
+        "normalizationMode": "EXACT",
+        "action": "KEEP_ROW"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "order_quarter",
+        "expression": "if(datePart(order_date, \"month\") <= 3, \"Q1\", if(datePart(order_date, \"month\") <= 6, \"Q2\", if(datePart(order_date, \"month\") <= 9, \"Q3\", \"Q4\")))"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "is_return",
+        "expression": "if(status == \"RETURNED\", 1, 0)"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "ColumnsSelector",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "store_id"
+        ],
+        "keep": false
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

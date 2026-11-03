@@ -1,0 +1,66 @@
+{
+  "keys": [
+    {
+      "column": "customer_id"
+    }
+  ],
+  "globalCount": false,
+  "values": [
+    {
+      "column": "row_number",
+      "type": "double",
+      "sum": false,
+      "avg": false,
+      "min": false,
+      "max": true,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "net_amount_sum_sum",
+      "type": "double",
+      "sum": false,
+      "avg": false,
+      "min": false,
+      "max": true,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "order_date_lagdiff1",
+      "type": "double",
+      "sum": false,
+      "avg": true,
+      "min": false,
+      "max": false,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "order_date",
+      "type": "double",
+      "sum": false,
+      "avg": false,
+      "min": true,
+      "max": true,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    }
+  ]
+}

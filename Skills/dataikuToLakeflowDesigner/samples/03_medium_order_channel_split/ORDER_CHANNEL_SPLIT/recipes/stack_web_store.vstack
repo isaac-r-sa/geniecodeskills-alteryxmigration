@@ -1,0 +1,30 @@
+{
+  "mode": "UNION",
+  "selectedColumns": [],
+  "addOriginColumn": true,
+  "originColumnName": "original_dataset",
+  "originColumnMapping": [
+    {
+      "originDatasetName": "orders_web",
+      "originColumnValue": "orders_web"
+    },
+    {
+      "originDatasetName": "orders_store",
+      "originColumnValue": "orders_store"
+    }
+  ],
+  "virtualInputs": [
+    {
+      "index": 0,
+      "preFilter": {
+        "enabled": false
+      }
+    },
+    {
+      "index": 1,
+      "preFilter": {
+        "enabled": false
+      }
+    }
+  ]
+}

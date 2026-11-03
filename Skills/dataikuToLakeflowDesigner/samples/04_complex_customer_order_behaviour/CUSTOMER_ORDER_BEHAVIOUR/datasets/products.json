@@ -1,0 +1,43 @@
+{
+  "type": "PostgreSQL",
+  "managed": false,
+  "formatType": null,
+  "params": {
+    "connection": "postgres_retail_dwh",
+    "mode": "table",
+    "schema": "erp",
+    "table": "products"
+  },
+  "schema": {
+    "columns": [
+      {
+        "name": "product_id",
+        "type": "bigint"
+      },
+      {
+        "name": "product_name",
+        "type": "string"
+      },
+      {
+        "name": "category",
+        "type": "string"
+      },
+      {
+        "name": "list_price",
+        "type": "double"
+      },
+      {
+        "name": "cost",
+        "type": "double"
+      },
+      {
+        "name": "active_flag",
+        "type": "string"
+      }
+    ],
+    "userModified": false
+  },
+  "tags": [
+    "source"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "type": "pivot",
+  "neverRecomputeExistingPartitions": false,
+  "inputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "web_events",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "event_pivot",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "params": {},
+  "customMeta": {
+    "kv": {}
+  },
+  "versionTag": {
+    "versionNumber": 3
+  }
+}

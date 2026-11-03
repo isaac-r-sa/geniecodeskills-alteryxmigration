@@ -1,0 +1,31 @@
+{
+  "type": "window",
+  "neverRecomputeExistingPartitions": false,
+  "inputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "customer_360_scored",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "customer_360",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "params": {},
+  "customMeta": {
+    "kv": {}
+  },
+  "versionTag": {
+    "versionNumber": 3
+  }
+}

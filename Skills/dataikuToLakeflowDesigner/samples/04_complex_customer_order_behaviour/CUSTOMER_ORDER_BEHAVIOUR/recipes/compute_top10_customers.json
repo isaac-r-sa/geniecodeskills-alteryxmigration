@@ -1,0 +1,31 @@
+{
+  "type": "topn",
+  "neverRecomputeExistingPartitions": false,
+  "inputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "customer_summary",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "main": {
+      "items": [
+        {
+          "ref": "top10_customers",
+          "deps": []
+        }
+      ]
+    }
+  },
+  "params": {},
+  "customMeta": {
+    "kv": {}
+  },
+  "versionTag": {
+    "versionNumber": 3
+  }
+}

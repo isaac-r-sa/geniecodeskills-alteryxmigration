@@ -1,0 +1,46 @@
+{
+  "windows": [
+    {
+      "prefix": "",
+      "enablePartitioning": true,
+      "partitioningColumns": [
+        "customer_id"
+      ],
+      "enableOrdering": true,
+      "orders": [
+        {
+          "column": "order_date",
+          "desc": false
+        },
+        {
+          "column": "order_id",
+          "desc": false
+        }
+      ],
+      "limitPreceding": false,
+      "limitFollowing": true,
+      "followingRows": 0,
+      "rowNumber": true,
+      "rank": false,
+      "denseRank": false
+    }
+  ],
+  "values": [
+    {
+      "column": "net_amount_sum",
+      "type": "double",
+      "sum": true,
+      "lag": false
+    },
+    {
+      "column": "order_date",
+      "type": "date",
+      "lagDiff": true,
+      "lagValues": "1",
+      "lagDiffUnit": "DAYS"
+    }
+  ],
+  "postFilter": {
+    "enabled": false
+  }
+}

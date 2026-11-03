@@ -1,0 +1,39 @@
+{
+  "type": "PostgreSQL",
+  "managed": false,
+  "formatType": null,
+  "params": {
+    "connection": "postgres_retail_dwh",
+    "mode": "table",
+    "schema": "erp",
+    "table": "web_events"
+  },
+  "schema": {
+    "columns": [
+      {
+        "name": "event_id",
+        "type": "bigint"
+      },
+      {
+        "name": "customer_id",
+        "type": "bigint"
+      },
+      {
+        "name": "event_ts",
+        "type": "date"
+      },
+      {
+        "name": "event_type",
+        "type": "string"
+      },
+      {
+        "name": "page",
+        "type": "string"
+      }
+    ],
+    "userModified": false
+  },
+  "tags": [
+    "source"
+  ]
+}

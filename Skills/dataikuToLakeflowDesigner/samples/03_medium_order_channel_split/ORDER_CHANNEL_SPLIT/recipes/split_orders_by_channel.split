@@ -1,0 +1,17 @@
+{
+  "mode": "VALUES",
+  "column": "channel",
+  "values": [
+    {
+      "value": "WEB",
+      "outputIndex": 0
+    },
+    {
+      "value": "STORE",
+      "outputIndex": 1
+    }
+  ],
+  "defaultOutputIndex": 2,
+  "dropOutputIndex": -1,
+  "missingValueOutputIndex": 2
+}

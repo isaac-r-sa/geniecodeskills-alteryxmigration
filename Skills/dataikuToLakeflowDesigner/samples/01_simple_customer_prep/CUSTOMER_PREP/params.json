@@ -1,0 +1,9 @@
+{
+  "projectKey": "CUSTOMER_PREP",
+  "name": "Customer Prep",
+  "shortDesc": "Clean the CRM customer extract.",
+  "projectStatus": "Production",
+  "settings": {
+    "flowZones": []
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "ColumnRenamer",
+      "params": {
+        "renamings": [
+          {
+            "from": "row_number_max",
+            "to": "orders_count"
+          },
+          {
+            "from": "net_amount_sum_sum_max",
+            "to": "lifetime_amount"
+          },
+          {
+            "from": "order_date_lagdiff1_avg",
+            "to": "avg_days_between_orders"
+          },
+          {
+            "from": "order_date_min",
+            "to": "first_order_date"
+          },
+          {
+            "from": "order_date_max",
+            "to": "last_order_date"
+          },
+          {
+            "from": "APP_net_amount_sum_sum",
+            "to": "app_amount"
+          },
+          {
+            "from": "STORE_net_amount_sum_sum",
+            "to": "store_amount"
+          },
+          {
+            "from": "WEB_net_amount_sum_sum",
+            "to": "web_amount"
+          }
+        ]
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FillEmptyWithValue",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "app_amount",
+          "store_amount",
+          "web_amount"
+        ],
+        "value": "0"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "avg_order_value",
+        "expression": "round(lifetime_amount / orders_count * 100) / 100"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "CreateColumnWithGREL",
+      "params": {
+        "column": "web_share",
+        "expression": "round(web_amount / lifetime_amount * 1000) / 1000"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "RoundProcessor",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "lifetime_amount"
+        ],
+        "mode": "ROUND",
+        "precision": 2,
+        "places": 2
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

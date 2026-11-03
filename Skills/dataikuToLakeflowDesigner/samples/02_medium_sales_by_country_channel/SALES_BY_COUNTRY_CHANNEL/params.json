@@ -1,0 +1,9 @@
+{
+  "projectKey": "SALES_BY_COUNTRY_CHANNEL",
+  "name": "Sales By Country Channel",
+  "shortDesc": "Completed-order sales by customer country and channel.",
+  "projectStatus": "Production",
+  "settings": {
+    "flowZones": []
+  }
+}

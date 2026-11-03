@@ -1,0 +1,56 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "mode": "TRIM"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "mode": "TO_UPPER"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FillEmptyWithValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "value": "UNKNOWN"
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

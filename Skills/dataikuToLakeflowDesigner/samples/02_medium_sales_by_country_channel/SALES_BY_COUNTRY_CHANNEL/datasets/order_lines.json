@@ -1,0 +1,43 @@
+{
+  "type": "PostgreSQL",
+  "managed": false,
+  "formatType": null,
+  "params": {
+    "connection": "postgres_retail_dwh",
+    "mode": "table",
+    "schema": "erp",
+    "table": "order_lines"
+  },
+  "schema": {
+    "columns": [
+      {
+        "name": "order_id",
+        "type": "bigint"
+      },
+      {
+        "name": "line_no",
+        "type": "int"
+      },
+      {
+        "name": "product_id",
+        "type": "bigint"
+      },
+      {
+        "name": "quantity",
+        "type": "int"
+      },
+      {
+        "name": "unit_price",
+        "type": "double"
+      },
+      {
+        "name": "discount_pct",
+        "type": "double"
+      }
+    ],
+    "userModified": false
+  },
+  "tags": [
+    "source"
+  ]
+}

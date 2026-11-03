@@ -1,0 +1,25 @@
+{
+  "windows": [
+    {
+      "prefix": "",
+      "enablePartitioning": true,
+      "partitioningColumns": [
+        "country"
+      ],
+      "enableOrdering": true,
+      "orders": [
+        {
+          "column": "revenue_6m",
+          "desc": true
+        }
+      ],
+      "rowNumber": false,
+      "rank": true,
+      "denseRank": false
+    }
+  ],
+  "values": [],
+  "postFilter": {
+    "enabled": false
+  }
+}

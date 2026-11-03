@@ -1,0 +1,57 @@
+{
+  "name": "Daily refresh",
+  "type": "step_based",
+  "active": true,
+  "triggers": [
+    {
+      "type": "temporal",
+      "params": {
+        "frequency": "Daily",
+        "hour": 6,
+        "minute": 30,
+        "timezone": "Europe/Berlin"
+      }
+    }
+  ],
+  "params": {
+    "steps": [
+      {
+        "type": "build_flowitem",
+        "params": {
+          "builds": [
+            {
+              "type": "DATASET",
+              "itemId": "customer_360"
+            }
+          ],
+          "jobType": "RECURSIVE_FORCED_BUILD"
+        }
+      },
+      {
+        "type": "check_dataset",
+        "params": {
+          "checks": [
+            {
+              "type": "recordCount",
+              "minValue": 300
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reporters": [
+    {
+      "messaging": {
+        "type": "mail-scenario",
+        "configuration": {
+          "recipients": "crm-analytics@retail.example",
+          "subject": "Customer 360 refreshed"
+        }
+      },
+      "phase": "END",
+      "runConditionEnabled": true,
+      "runCondition": "outcome != 'SUCCESS'"
+    }
+  ]
+}

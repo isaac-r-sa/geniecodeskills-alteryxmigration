@@ -1,0 +1,22 @@
+{
+  "explicitIdentifiers": [
+    "customer_id"
+  ],
+  "keyColumns": [
+    "channel"
+  ],
+  "valueLimit": 20,
+  "otherColumnsAggregation": "NONE",
+  "valueColumns": [
+    {
+      "column": "net_amount_sum",
+      "sum": true
+    }
+  ],
+  "explicitValues": [
+    "APP",
+    "STORE",
+    "WEB"
+  ],
+  "computeCount": false
+}

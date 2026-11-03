@@ -1,0 +1,110 @@
+{
+  "virtualInputs": [
+    {
+      "index": 0,
+      "preFilter": {
+        "enabled": true,
+        "uiData": {
+          "mode": "CUSTOM"
+        },
+        "expression": "status == \"COMPLETED\"",
+        "language": "GREL"
+      },
+      "computedColumns": []
+    },
+    {
+      "index": 1,
+      "preFilter": {
+        "enabled": false
+      },
+      "computedColumns": []
+    },
+    {
+      "index": 2,
+      "preFilter": {
+        "enabled": false
+      },
+      "computedColumns": []
+    }
+  ],
+  "joins": [
+    {
+      "table1": 0,
+      "table2": 1,
+      "type": "INNER",
+      "conditionsMode": "AND",
+      "on": [
+        {
+          "column1": {
+            "name": "order_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "order_id",
+            "table": 1
+          },
+          "type": "EQ",
+          "maxMatches": 0
+        }
+      ]
+    },
+    {
+      "table1": 0,
+      "table2": 2,
+      "type": "LEFT",
+      "conditionsMode": "AND",
+      "on": [
+        {
+          "column1": {
+            "name": "customer_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "customer_id",
+            "table": 2
+          },
+          "type": "EQ",
+          "maxMatches": 1
+        }
+      ]
+    }
+  ],
+  "selectedColumns": [
+    {
+      "name": "order_id",
+      "table": 0
+    },
+    {
+      "name": "order_date",
+      "table": 0
+    },
+    {
+      "name": "channel",
+      "table": 0
+    },
+    {
+      "name": "line_no",
+      "table": 1
+    },
+    {
+      "name": "quantity",
+      "table": 1
+    },
+    {
+      "name": "country",
+      "table": 2
+    }
+  ],
+  "computedColumns": [
+    {
+      "name": "line_amount",
+      "type": "double",
+      "mode": "GREL",
+      "expr": "quantity * coalesce(unit_price, 0) * (1 - discount_pct)"
+    }
+  ],
+  "postFilter": {
+    "enabled": false
+  },
+  "enableAutoCastInJoinConditions": false
+}

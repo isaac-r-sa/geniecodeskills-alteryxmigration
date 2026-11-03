@@ -1,0 +1,18 @@
+{
+  "type": "PostgreSQL",
+  "managed": true,
+  "formatType": null,
+  "params": {
+    "connection": "postgres_retail_dwh",
+    "mode": "table",
+    "schema": "dwh",
+    "table": "${projectKey}_customer_360"
+  },
+  "schema": {
+    "columns": [],
+    "userModified": false
+  },
+  "tags": [
+    "output"
+  ]
+}

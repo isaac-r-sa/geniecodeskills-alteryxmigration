@@ -1,0 +1,21 @@
+{
+  "firstRows": 10,
+  "lastRows": 0,
+  "keys": [],
+  "orders": [
+    {
+      "column": "lifetime_amount",
+      "desc": true
+    },
+    {
+      "column": "customer_id",
+      "desc": false
+    }
+  ],
+  "computeRowNumber": true,
+  "rowNumberColumn": "top_rank",
+  "retrievedColumnsMode": "ALL",
+  "preFilter": {
+    "enabled": false
+  }
+}

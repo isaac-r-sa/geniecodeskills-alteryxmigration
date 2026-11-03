@@ -1,0 +1,76 @@
+{
+  "keys": [
+    {
+      "column": "country"
+    },
+    {
+      "column": "channel"
+    }
+  ],
+  "globalCount": true,
+  "values": [
+    {
+      "column": "order_id",
+      "type": "double",
+      "sum": false,
+      "avg": false,
+      "min": false,
+      "max": false,
+      "count": false,
+      "countDistinct": true,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "line_amount",
+      "type": "double",
+      "sum": true,
+      "avg": true,
+      "min": false,
+      "max": false,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "quantity",
+      "type": "double",
+      "sum": true,
+      "avg": false,
+      "min": false,
+      "max": false,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    },
+    {
+      "column": "order_date",
+      "type": "double",
+      "sum": false,
+      "avg": false,
+      "min": false,
+      "max": true,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    }
+  ],
+  "preFilter": {
+    "enabled": false
+  },
+  "postFilter": {
+    "enabled": false
+  },
+  "computedColumns": []
+}

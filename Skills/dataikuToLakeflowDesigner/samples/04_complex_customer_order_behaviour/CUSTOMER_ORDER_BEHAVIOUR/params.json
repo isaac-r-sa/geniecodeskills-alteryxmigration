@@ -1,0 +1,9 @@
+{
+  "projectKey": "CUSTOMER_ORDER_BEHAVIOUR",
+  "name": "Customer Order Behaviour",
+  "shortDesc": "Order cadence, lifetime value and channel mix per customer; top 10.",
+  "projectStatus": "Production",
+  "settings": {
+    "flowZones": []
+  }
+}

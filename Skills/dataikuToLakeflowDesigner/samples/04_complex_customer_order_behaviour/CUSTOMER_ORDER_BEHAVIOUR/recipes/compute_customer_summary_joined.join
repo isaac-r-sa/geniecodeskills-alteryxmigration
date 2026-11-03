@@ -1,0 +1,69 @@
+{
+  "virtualInputs": [
+    {
+      "index": 0
+    },
+    {
+      "index": 1
+    }
+  ],
+  "joins": [
+    {
+      "table1": 0,
+      "table2": 1,
+      "type": "LEFT",
+      "on": [
+        {
+          "column1": {
+            "name": "customer_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "customer_id",
+            "table": 1
+          },
+          "type": "EQ"
+        }
+      ]
+    }
+  ],
+  "selectedColumns": [
+    {
+      "name": "customer_id",
+      "table": 0
+    },
+    {
+      "name": "row_number_max",
+      "table": 0
+    },
+    {
+      "name": "net_amount_sum_sum_max",
+      "table": 0
+    },
+    {
+      "name": "order_date_lagdiff1_avg",
+      "table": 0
+    },
+    {
+      "name": "order_date_min",
+      "table": 0
+    },
+    {
+      "name": "order_date_max",
+      "table": 0
+    },
+    {
+      "name": "APP_net_amount_sum_sum",
+      "table": 1
+    },
+    {
+      "name": "STORE_net_amount_sum_sum",
+      "table": 1
+    },
+    {
+      "name": "WEB_net_amount_sum_sum",
+      "table": 1
+    }
+  ],
+  "computedColumns": []
+}

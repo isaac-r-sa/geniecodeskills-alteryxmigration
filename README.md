@@ -10,6 +10,8 @@ A set of [Databricks Genie Code](https://docs.databricks.com/aws/en/genie-code/s
 | `Skills/alteryxToPythonSpark`      | **Alteryx Migration to PySpark on Databricks** | Converts Alteryx workflows (`.yxmd`, `.yxmc`, `.yxwz`) into Python / PySpark notebooks following a medallion (bronze / silver / gold) layout, with mandatory output validation against an expected result file.                                                                                                                     |
 | `Skills/alteryxToLakeflowDesigner` | **alteryx-to-vdp**                             | Converts Alteryx workflows into Databricks **Lakeflow Designer** (Visual Data Prep ETL) pipelines. Maps the full Alteryx tool palette to VDP operators (Source, Output, Aggregate, Combine, Filter, Join, Pivot, Sort, SQL, Transform, Python, AI Function, etc.) and materializes the final output to a Unity Catalog Delta table. See [`Skills/alteryxToLakeflowDesigner/Samples/`](Skills/alteryxToLakeflowDesigner/Samples/) for end-to-end conversion examples. |
 | `Skills/alteryxToDatabricksSdp`    | **alteryx-to-databricks-sdp**                  | Converts Alteryx workflows into a runnable Databricks **Lakeflow Spark Declarative Pipeline (SDP)** expressed in pure SQL. Emits `CREATE OR REFRESH STREAMING TABLE` / `MATERIALIZED VIEW` files in bronze/silver/gold layers plus a `MANUAL_STEPS.md` for anything that can't be auto-converted.                                   |
+| `Skills/informaticaToLakeflowDesigner` | **informatica-to-vdp** | Converts Informatica PowerCenter mappings (POWERMART XML) and IDMC CDI exports into native **Lakeflow Designer** pipelines (`.designer.ipynb`). Ships `designer_gen.py` + verified operator templates and 5 tested samples (simple to very complex, incl. SCD2). |
+| `Skills/dataikuToLakeflowDesigner` | **dataiku-to-vdp** | Converts Dataiku DSS project exports (datasets, recipes + payloads, variables, scenarios) into native **Lakeflow Designer** pipelines (`.designer.ipynb`). Ships `designer_gen.py` + verified operator templates and 5 tested samples (simple to very complex). |
 
 
 
@@ -39,7 +41,7 @@ DEST=/Users/$(databricks current-user me | jq -r .userName)/.assistant/skills
 # DEST=/.assistant/skills
 
 # Import each skill
-for skill in alteryxToPythonSpark alteryxToLakeflowDesigner alteryxToDatabricksSdp; do
+for skill in alteryxToPythonSpark alteryxToLakeflowDesigner alteryxToDatabricksSdp informaticaToLakeflowDesigner dataikuToLakeflowDesigner; do
   databricks workspace import-dir "Skills/$skill" "$DEST/$skill" --overwrite
 done
 ```

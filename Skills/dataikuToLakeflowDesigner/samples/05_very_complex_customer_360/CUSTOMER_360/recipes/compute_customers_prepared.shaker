@@ -1,0 +1,160 @@
+{
+  "columnsSelection": {
+    "mode": "ALL"
+  },
+  "explorationSampling": {
+    "selection": {
+      "maxRecords": 10000
+    }
+  },
+  "origin": "PREPARE_RECIPE",
+  "steps": [
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "mode": "TRIM"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "mode": "TO_UPPER"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FindReplace",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "country"
+        ],
+        "output": "country_name",
+        "matching": "FULL_STRING",
+        "normalization": "EXACT",
+        "mapping": [
+          {
+            "from": "DE",
+            "to": "Germany"
+          },
+          {
+            "from": "AT",
+            "to": "Austria"
+          },
+          {
+            "from": "CH",
+            "to": "Switzerland"
+          },
+          {
+            "from": "NL",
+            "to": "Netherlands"
+          },
+          {
+            "from": "FR",
+            "to": "France"
+          }
+        ],
+        "stopAfterFirstMatch": true
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "segment"
+        ],
+        "mode": "TRIM"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "StringTransformer",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "segment"
+        ],
+        "mode": "TO_UPPER"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FillEmptyWithValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "segment"
+        ],
+        "value": "UNKNOWN"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "FilterOnValue",
+      "params": {
+        "appliesTo": "SINGLE_COLUMN",
+        "columns": [
+          "status"
+        ],
+        "values": [
+          "X"
+        ],
+        "matchingMode": "FULL_STRING",
+        "normalizationMode": "EXACT",
+        "action": "REMOVE_ROW"
+      },
+      "alwaysShowComment": false
+    },
+    {
+      "preview": false,
+      "metaType": "PROCESSOR",
+      "disabled": false,
+      "type": "ColumnsSelector",
+      "params": {
+        "appliesTo": "COLUMNS",
+        "columns": [
+          "customer_id",
+          "country",
+          "country_name",
+          "segment",
+          "status"
+        ],
+        "keep": true
+      },
+      "alwaysShowComment": false
+    }
+  ],
+  "maxProcessedMemTableBytes": -1
+}

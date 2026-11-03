@@ -1,0 +1,9 @@
+{
+  "projectKey": "ORDER_CHANNEL_SPLIT",
+  "name": "Order Channel Split",
+  "shortDesc": "Split orders by channel and re-stack web + store for the omnichannel report.",
+  "projectStatus": "Production",
+  "settings": {
+    "flowZones": []
+  }
+}

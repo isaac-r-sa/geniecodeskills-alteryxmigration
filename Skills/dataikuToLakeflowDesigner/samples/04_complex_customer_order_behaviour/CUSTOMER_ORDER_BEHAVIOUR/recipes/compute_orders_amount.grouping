@@ -1,0 +1,33 @@
+{
+  "keys": [
+    {
+      "column": "order_id"
+    },
+    {
+      "column": "customer_id"
+    },
+    {
+      "column": "order_date"
+    },
+    {
+      "column": "channel"
+    }
+  ],
+  "globalCount": false,
+  "values": [
+    {
+      "column": "net_amount",
+      "type": "double",
+      "sum": true,
+      "avg": false,
+      "min": false,
+      "max": false,
+      "count": false,
+      "countDistinct": false,
+      "first": false,
+      "last": false,
+      "concat": false,
+      "stddev": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "explicitIdentifiers": [
+    "customer_id"
+  ],
+  "keyColumns": [
+    "event_type"
+  ],
+  "valueColumns": [],
+  "computeCount": true,
+  "explicitValues": [
+    "add_to_cart",
+    "checkout",
+    "view"
+  ],
+  "otherColumnsAggregation": "NONE"
+}

@@ -1,0 +1,139 @@
+{
+  "virtualInputs": [
+    {
+      "index": 0
+    },
+    {
+      "index": 1
+    },
+    {
+      "index": 2
+    },
+    {
+      "index": 3
+    }
+  ],
+  "joins": [
+    {
+      "table1": 0,
+      "table2": 1,
+      "type": "LEFT",
+      "on": [
+        {
+          "column1": {
+            "name": "customer_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "customer_id",
+            "table": 1
+          },
+          "type": "EQ"
+        }
+      ]
+    },
+    {
+      "table1": 0,
+      "table2": 2,
+      "type": "LEFT",
+      "on": [
+        {
+          "column1": {
+            "name": "customer_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "customer_id",
+            "table": 2
+          },
+          "type": "EQ"
+        }
+      ]
+    },
+    {
+      "table1": 0,
+      "table2": 3,
+      "type": "LEFT",
+      "on": [
+        {
+          "column1": {
+            "name": "customer_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "customer_id",
+            "table": 3
+          },
+          "type": "EQ"
+        }
+      ]
+    }
+  ],
+  "selectedColumns": [
+    {
+      "name": "customer_id",
+      "table": 0
+    },
+    {
+      "name": "country",
+      "table": 0
+    },
+    {
+      "name": "country_name",
+      "table": 0
+    },
+    {
+      "name": "segment",
+      "table": 0
+    },
+    {
+      "name": "status",
+      "table": 0
+    },
+    {
+      "name": "orders_6m",
+      "table": 1
+    },
+    {
+      "name": "revenue_6m",
+      "table": 1
+    },
+    {
+      "name": "last_order_date",
+      "table": 1
+    },
+    {
+      "name": "count",
+      "table": 2,
+      "alias": "sessions"
+    },
+    {
+      "name": "n_events_sum",
+      "table": 2,
+      "alias": "total_events"
+    },
+    {
+      "name": "has_checkout_sum",
+      "table": 2,
+      "alias": "checkout_sessions"
+    },
+    {
+      "name": "duration_min_avg",
+      "table": 2,
+      "alias": "avg_session_minutes"
+    },
+    {
+      "name": "add_to_cart_count",
+      "table": 3
+    },
+    {
+      "name": "checkout_count",
+      "table": 3
+    },
+    {
+      "name": "view_count",
+      "table": 3
+    }
+  ],
+  "computedColumns": []
+}

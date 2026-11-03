@@ -1,0 +1,9 @@
+{
+  "projectKey": "CUSTOMER_360",
+  "name": "Customer 360",
+  "shortDesc": "Customer 360: recent revenue, web sessions, funnel events and engagement tier.",
+  "projectStatus": "Production",
+  "settings": {
+    "flowZones": []
+  }
+}

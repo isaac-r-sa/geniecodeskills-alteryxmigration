@@ -1,0 +1,95 @@
+{
+  "virtualInputs": [
+    {
+      "index": 0,
+      "preFilter": {
+        "enabled": true,
+        "expression": "status == \"COMPLETED\"",
+        "language": "GREL"
+      }
+    },
+    {
+      "index": 1,
+      "preFilter": {
+        "enabled": false
+      }
+    },
+    {
+      "index": 2,
+      "preFilter": {
+        "enabled": false
+      }
+    }
+  ],
+  "joins": [
+    {
+      "table1": 0,
+      "table2": 1,
+      "type": "INNER",
+      "on": [
+        {
+          "column1": {
+            "name": "order_id",
+            "table": 0
+          },
+          "column2": {
+            "name": "order_id",
+            "table": 1
+          },
+          "type": "EQ"
+        }
+      ]
+    },
+    {
+      "table1": 1,
+      "table2": 2,
+      "type": "LEFT",
+      "on": [
+        {
+          "column1": {
+            "name": "product_id",
+            "table": 1
+          },
+          "column2": {
+            "name": "product_id",
+            "table": 2
+          },
+          "type": "EQ"
+        }
+      ]
+    }
+  ],
+  "selectedColumns": [
+    {
+      "name": "order_id",
+      "table": 0
+    },
+    {
+      "name": "customer_id",
+      "table": 0
+    },
+    {
+      "name": "order_date",
+      "table": 0
+    },
+    {
+      "name": "channel",
+      "table": 0
+    },
+    {
+      "name": "quantity",
+      "table": 1
+    }
+  ],
+  "computedColumns": [
+    {
+      "name": "net_amount",
+      "type": "double",
+      "mode": "SQL",
+      "expr": "ROUND(quantity * COALESCE(unit_price, list_price) * (1 - discount_pct), 2)"
+    }
+  ],
+  "postFilter": {
+    "enabled": false
+  }
+}
