@@ -1,6 +1,6 @@
 ---
 name: alteryx-to-vdp
-description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into Databricks Lakeflow Designer Visual Data Prep pipelines. Maps the full Alteryx tool palette (In/Out, Preparation, Join, Parse, Transform, Data Investigation, Predictive, Time Series, Spatial, Reporting, Documentation, Developer, Interface, Macros) to the actual VDP operators (Source, Output, AI Function, Aggregate, Combine, Enter Data, Filter, Join, Limit, Pivot, Prepare, Sort, SQL, Transform, Unique, Visualization, Python, Note, Group), handles all common input/output file formats (CSV, TSV, Excel, JSON, XML, Parquet, Avro, ORC, Delta, SAS, SPSS, R, geospatial, PDF, .yxdb), and always materializes output to a Unity Catalog Delta table. Validates against expected output when provided.
+description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into Databricks Lakeflow Designer Visual Data Prep pipelines. Maps the full Alteryx tool palette (In/Out, Preparation, Join, Parse, Transform, Data Investigation, Predictive, Time Series, Spatial, Reporting, Documentation, Developer, Interface, Macros) to the actual VDP operators (Source, Output, AI Function, Aggregate, Combine, Enter Data, Filter, Join, Limit, Pivot, Prepare, Select, Sort, SQL, Unique, Visualization, Python, Note, Group, Guardrails, Notifications, HTML, Inline UDO, MCP File Source), handles all common input/output file formats (CSV, TSV, Excel, JSON, XML, Parquet, Avro, ORC, Delta, SAS, SPSS, R, geospatial, PDF, .yxdb), and writes output to a Unity Catalog Delta table and/or a CSV, Excel, or JSON file, as the user chooses. Generates a Markdown documentation file per workflow. Validates against expected output, or a re-run of the Alteryx logic when none exists.
 ---
 
 # Skill: Convert Alteryx Workflow (.yxmd / .yxmc) to Lakeflow Designer Visual Data Prep
@@ -9,9 +9,21 @@ description: Convert Alteryx Designer workflows (.yxmd / .yxmc XML files) into D
 
 When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it into a fully functional Lakeflow Designer (Visual Data Prep) pipeline. The pipeline must:
 1. Reproduce the exact logic of the Alteryx workflow.
-2. Always materialize the final output to a Unity Catalog Delta table.
-3. Validate results against expected output (see Step 10). If the user has not provided an expected output file, explicitly ask for one before finalizing the pipeline. Validation is required and must not be skipped.
+2. Materialize the final output to the destination the user chooses. **Always ask the user** whether they want the results as a Unity Catalog Delta table, as an export to a supported file format (CSV, Excel, JSON), or both (see Step 9a). Never assume the destination.
+3. Validate results against expected output (see Step 10). If the user has not provided an expected output file, explicitly ask for one before finalizing the pipeline. If none exists, validate by re-running the Alteryx logic step by step (Step 10a-alt). Validation is required and must not be skipped.
 4. Cover the full Alteryx tool palette and all common file formats — flagging any tool/format that has no automatic VDP equivalent so the user can address it manually.
+5. Produce workflow documentation as a Markdown (`.md`) file (see Step 16). **Always ask the user where to save it** before writing the file.
+
+---
+
+## Step 0: Operator Discovery (run before every conversion)
+
+The live operator catalog in the agent's system context is the **source of truth**, not this file. Operators and templateVersions are added regularly; the reference table in this file is a snapshot that may be stale.
+
+1. **Compare the catalog against the "VDP Operator Reference" table below.** At the start of every conversion, list the operators and templateVersions the catalog exposes that this file does not mention (or lists at an older version). Tell the user which new ones were found and use them.
+2. **Always pick an operator first.** The selection priority is: native visual operator > Prepare action > inline custom operator (`inline_udo`) > `sql` > `python`. Never reach for code because this file doesn't mention an operator — the catalog may have added it since the last update.
+3. **Check the workspace's user-defined operators** before writing code. Someone may have already built the transform you are about to hand-write. User-defined operators appear in the catalog under their registered names.
+4. **Re-run this check at the start of every conversion**, not just when the file was last edited. The catalog is live; this file is not.
 
 ---
 
@@ -19,20 +31,24 @@ When a user provides an Alteryx workflow file (`.yxmd` or `.yxmc`), convert it i
 
 > ### MANDATORY PRE-CHECK — runs BEFORE every operator decision
 > Before writing any `sql`, `python`, or `ai_function` operator, answer ALL of these in order:
-> 1. Can a **Transform** express this? (CASE WHEN, CAST, COALESCE, TRIM, UPPER, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, arithmetic, literals) → **USE TRANSFORM. STOP.**
-> 2. Can a **Filter** express this? (boolean row condition, with optional T/F split via v2.0.0) → **USE FILTER. STOP.**
-> 3. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/COUNT_DISTINCT/FIRST/LAST/CONCAT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE) → **USE AGGREGATE. STOP.**
-> 4. Can a **Join** express this? (equi-join on key columns; use split_join for Alteryx L/J/R) → **USE JOIN. STOP.**
-> 5. Can a **Sort**, **Limit**, **Pivot**, **Combine**, or **Unique** express this? → **USE THE VISUAL OPERATOR. STOP.**
-> 6. Can a **Prepare** action express this? (trim, cast, text_case, fill_null, replace_value, regex_replace, extract, parse_date, formula) → **USE PREPARE. STOP.**
+> 1. Can a **Prepare formula** express this? (CASE WHEN, CAST, COALESCE, TRIM, UPPER, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, arithmetic, literals, fill_null, regex_replace, parse_date, parse_json) → **USE PREPARE. STOP.**
+> 2. Can a **Select** express this? (pick, rename, reorder, or drop columns — NOT compute expressions) → **USE SELECT. STOP.**
+> 3. Can a **Filter** express this? (boolean row condition, with optional T/F split via v2.0.0) → **USE FILTER. STOP.**
+> 4. Can an **Aggregate** express this? (GROUP BY + SUM/AVG/COUNT/COUNT_DISTINCT/FIRST/LAST/CONCAT/MIN/MAX/MEDIAN/STDDEV/PERCENTILE; empty group_bys = one grand-total row) → **USE AGGREGATE. STOP.**
+> 5. Can a **Join** express this? (equi-join on key columns; use split_join for Alteryx L/J/R) → **USE JOIN. STOP.**
+> 6. Can a **Sort**, **Limit**, **Pivot**, **Combine**, or **Unique** express this? → **USE THE VISUAL OPERATOR. STOP.**
 > 7. Can an **Enter Data** express this? (small inline/lookup table ≤ 20 rows) → **USE ENTER_DATA. STOP.**
 > 8. Can a **Visualization** express this? (chart, counter, funnel — do NOT add a separate Aggregate upstream) → **USE VISUALIZATION. STOP.**
-> 9. Can this be expressed as a **User-Defined Operator**? (Create one via the sidebar: "+ Create user-defined operator" → describe it → Generate preview. Or use an existing shared UDO.) → **USE A UDO. STOP.**
+> 9. Is this reusable custom logic that exists (or should exist) as a UC function or inline custom operator? → **USE A UDO OR INLINE_UDO. STOP.**
 >
 > Only if ALL nine answers are NO may you proceed to `sql` or `python`.
 > If you write `sql` or `python` without answering all nine, the operator choice is wrong.
+>
+> **Key change**: `transform@3.0.0` is now **Select** — it only picks, renames, reorders, or drops columns. It CANNOT compute CASE WHEN, CAST, arithmetic, or any expression. For expressions use a **Prepare** `formula` action instead.
 
 **Always prefer visual/deterministic operators over custom code or AI.** For every Alteryx tool being converted, follow this strict priority order. MORE NODES is ALWAYS preferred over fewer consolidated nodes. Each logical step = its own operator.
+
+**Critical rename**: `transform@3.0.0` is now called **Select** in the UI and only picks/renames/reorders/drops columns. For all expression logic (CASE WHEN, CAST, COALESCE, arithmetic, string ops, date functions, literals), use a **Prepare** operator with a `formula` action. Throughout this file, wherever it says "use Transform for X", read it as "use a Prepare formula action for X" and "use Select for column picking and renaming only".
 
 ### CRITICAL RULE: Unsupported or Uncovered Patterns
 
@@ -40,7 +56,7 @@ When you encounter something not covered by this skill, follow this exact sequen
 
 1. **Check for a new or updated operator first.** VDP is actively developed. Before writing custom code, search for whether the operation is now supported by an existing visual operator (e.g., Prepare formula, Aggregate function, SQL AI function, new output mode). Ask or check Databricks release notes.
 2. **Create a User-Defined Operator (UDO) instead of raw code.** If the operation isn't natively supported, create a UDO before writing raw `python` or `sql`:
-   - **Local UDO (fastest):** In the Operators sidebar, click **"+ Create user-defined operator"** → describe what you need → **"Generate preview"** → **"Approve and create"**. Genie Code generates the operator config and Python function. It appears in the palette immediately.
+   - **Local / inline UDO (`inline_udo`, fastest):** In the Operators sidebar, click **"+ Create user-defined operator"** → describe what you need → **"Generate preview"** → **"Approve and create"**. Genie Code generates the operator config and Python function. It appears in the palette immediately.
    - **Shared UDO (cross-file reuse):** If the logic will be reused across pipelines, register a `python-run-function`, `uc-udf`, or `uc-udtf` in `.user_defined_operators.yaml`.
    This keeps the pipeline **visual** — UDOs are drag-and-drop operators, not embedded code blocks. Always prefer a UDO over raw `python` or `sql`.
 3. **If no operator or UDO fits, offer the user their options.** Present the alternatives — typically:
@@ -54,19 +70,22 @@ When you encounter something not covered by this skill, follow this exact sequen
 ### Priority 1: Visual Operators (ALWAYS try first)
 
 | Operator | Use For |
-|----------|---------|
-| **Transform** | Column derivations, CASE WHEN, CAST, COALESCE, TRIM, UPPER, SOUNDEX, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, literal values, `*` passthrough |
-| **Filter** | Row filtering with boolean conditions |
-| **Aggregate** | GROUP BY with SUM, AVG, COUNT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE |
-| **Join** | Combining tables on key columns |
-| **Sort** | ORDER BY |
+|----------|--------|
+| **Prepare** | Ordered action list: formula (CASE WHEN, CAST, COALESCE, TRIM, UPPER, SOUNDEX, REGEXP_EXTRACT, SPLIT + ELEMENT_AT, DATEDIFF, arithmetic, literals), multi_column_formula, cast, replace_value, fill_null, text_case, trim, regex_replace, extract, parse_date, parse_json, rename_columns |
+| **Select** | Pick, rename, reorder, or drop columns only (NOT expressions). `mode: select` with `edits` (column + optional alias), `mode: passthrough` with edits, plus optional dynamic block for keeping/removing columns by type, name pattern, or metadata expression |
+| **Filter** | Row filtering with boolean conditions; v2.0.0 outputs `filtered_data` + `excluded_data` |
+| **Aggregate** | GROUP BY with SUM, AVG, COUNT, COUNT_DISTINCT, MIN, MAX, MEDIAN, STDDEV, VARIANCE, PERCENTILE, FIRST, LAST, CONCAT. Empty `group_bys` = one grand-total row |
+| **Join** | Combining tables on key columns; split_join for Alteryx L/J/R |
+| **Sort** | ORDER BY — `columnExpr.expr` must be a COLUMN NAME, not an expression |
 | **Limit** | TOP N rows |
 | **Pivot/Unpivot** | Reshape wide↔tall |
-| **Combine** | UNION, INTERSECT, EXCEPT |
+| **Combine** | UNION, INTERSECT, EXCEPT — ONE variadic `data` input port for N inputs; `union_by_name` + `allow_missing_columns` map to Alteryx Union ByName |
 | **Unique** | Deduplicate rows (full-row or by column subset, with optional sort to control which row is kept) |
-| **Prepare** | Ordered action list: formula, cast, replace_value, fill_null, text_case, trim, regex_replace, extract, parse_date |
 | **Enter Data** | Inline lookup/constant tables (markdown-style table input) — replaces `spark.createDataFrame` for small static data |
 | **Visualization** | Inline charts (bar, line, scatter, pie, histogram, box, heatmap, etc.) — replaces MANUAL→Lakeview for exploratory charts |
+| **Guardrails** | Data quality checks — `passed` / `failed` / `errors` output ports; `on_failure: warn/block/stop`. Use for Alteryx Test/Message tools and reject branches |
+| **Notifications** | Email notification — use for the Alteryx Email tool |
+| **HTML** | Custom HTML report — use for Alteryx Render/Layout reports when a chart isn't enough |
 
 ### Priority 2: AI Functions (ONLY when ALL 3 conditions are met)
 
@@ -75,62 +94,52 @@ When you encounter something not covered by this skill, follow this exact sequen
 3. There is **no deterministic equivalent** (no CASE WHEN, lookup table, or regex can do it)
 
 ✅ **Good AI use cases:** customer profile generation, free-text sentiment, text summarization, semantic classification
-❌ **Bad AI use cases (use Transform instead):** product name standardization (finite mappings), region→coord lookup, rule-based segment assignment, data type conversion
+❌ **Bad AI use cases (use Prepare instead):** product name standardization (finite mappings), region→coord lookup, rule-based segment assignment, data type conversion
 
 #### AI Function Decision Flowchart:
-1. Is the mapping finite and known? → **Transform CASE WHEN** or **Join to lookup table**
-2. Does it need to be deterministic/reproducible? → **Transform** or **SQL**
+1. Is the mapping finite and known? → **Prepare formula** CASE WHEN or **Join** to lookup table
+2. Does it need to be deterministic/reproducible? → **Prepare** or **SQL**
 3. Is the table millions of rows? → **NOT AI** (cost/latency explosion)
 4. Is it genuinely creative/semantic with no deterministic equivalent? → **AI Function** ✅
 
-### Priority 3: User-Defined Operators (UDO) — ALWAYS check before Python/SQL
+### Priority 3: User-Defined Operators (UDO) — for reusable custom functions
 
-When an operation has no native built-in visual operator, **always evaluate whether a User-Defined Operator can express it before writing raw `python` or `sql`**. UDOs appear in the Designer palette as first-class visual operators, keeping the pipeline visual and maintainable.
+When custom logic is needed AND will be reused across pipelines, register it as a UDO rather than embedding it in a raw `python` cell. UDOs appear in the Designer palette as first-class visual operators.
 
-VDP Designer supports **two kinds** of UDOs:
-
-#### 3a. Local UDO (AI-generated, per-file) — TRY THIS FIRST
-
-The fastest path. Created directly from the Designer sidebar:
-1. In the **Operators menu** (left sidebar), click **"+ Create user-defined operator"**
-2. Enter a **Description** of what the operator should do (and optionally a **Name**)
-3. Click **"Generate preview"** — Genie Code generates the operator config and Python function
-4. Review the generated configuration, then click **"Approve and create"**
-
-Designer stores the local operator's definition **in the current `.designer.ipynb` file** and adds it to the Operators menu. It works like any built-in operator: drag it onto the canvas, connect inputs, preview results.
-
-**Use local UDO when:**
-- A built-in operator cannot express the logic (e.g., custom calculation, API call, specialized parsing)
-- You need a quick, pipeline-specific custom operator
-- The logic is too complex for a Transform/Prepare formula but you want to stay visual
-- You're prototyping — local UDOs can later be promoted to shared UDOs
-
-**Local UDO management:**
-- Edit or delete via the operator's actions menu in the sidebar
-- You must remove every instance of the operator from the canvas before deleting its definition
-- Local UDOs are scoped to the current file only — for cross-file reuse, promote to a shared UDO
-
-#### 3b. Shared UDO (registered, cross-file reuse)
-
-For logic that is reused across multiple pipelines, register a shared UDO defined in a YAML file with the `user-defined-operator-v0.1.0` schema. Three types:
-
-| Shared UDO Type | Use For | Example |
+| UDO Subtype | Use For | Example |
 |---|---|---|
-| **`python-run-function`** | DataFrame-level transforms, external integrations; no UC dependency | Email dispatch, API enrichment, SFTP push, PDF generation |
-| **`uc-udf`** | Row-level column transform backed by a UC scalar function | Currency conversion, address normalization, compound interest |
-| **`uc-udtf`** | Table-level transform backed by a UC table-valued function | ML scoring, K-means clustering, batch enrichment |
+| **`uc-udf`** | Row-level custom transform registered as a UC UDF | Currency conversion, address normalization, custom hash |
+| **`uc-udtf`** | Multi-row / stateful operation registered as a UC UDTF | ML model scoring, clustering, batch enrichment |
+| **`python-run-function`** | Standalone Python callable, no UC dependency | External API call, email notification, PDF generation |
 
-**Registration**: Shared UDOs are registered in `.user_defined_operators.yaml` placed at the workspace root (visible to all users) or in your user home folder (visible only to you). See § 2.15 for YAML schema and registration examples.
-
-**Promote local → shared when:**
+**Promote to UDO when:**
 - The same logic appears in ≥2 pipelines (or is likely to)
 - The function already exists (or should exist) as a UC UDF/UDTF
 - The user has a library of reusable transforms (e.g., tax calculation, compliance rules)
 - The Alteryx workflow calls a `.yxi` Custom Tool with a known Python implementation
 
-**Do NOT use a UDO when:**
-- The operation is expressible with a built-in operator (Transform, Aggregate, etc.) — built-ins always win
-- The logic is trivially one-off AND fits in a single `python` or `sql` node — but even then, consider a local UDO for visual clarity
+**Do NOT promote to UDO when:**
+- The operation is expressible with a built-in operator (Prepare, Select, Aggregate, etc.) — built-ins are always preferred.
+- The custom logic is one-off and pipeline-specific — use `python` instead
+
+**Registration**: UDOs are defined in `.user_defined_operators.yaml` in the workspace. The `template` field in the YAML docstring is the UDO's registered identifier (not a fixed value like `transform`). See § 2.15 for YAML examples.
+
+#### 3a. Local / inline UDO (`inline_udo`, per-file) — TRY THIS FIRST
+
+Created directly from the Designer sidebar:
+1. In the **Operators menu** (left sidebar), click **"+ Create user-defined operator"**
+2. Enter a **Description** of what the operator should do (and optionally a **Name**)
+3. Click **"Generate preview"** — Genie Code generates the operator config and Python function
+4. Review the generated configuration, then click **"Approve and create"**
+
+Designer stores the definition **in the current `.designer.ipynb` file** and adds it to the Operators menu. Use it when no built-in operator or Prepare action can express the logic and you want to stay visual. Local UDOs are scoped to the current file; you must remove every instance from the canvas before deleting the definition. See `new-operators-reference.md` §6 for the `inline_udo` YAML.
+
+#### 3b. Shared UDO (registered, cross-file reuse)
+
+Register a `python-run-function`, `uc-udf`, or `uc-udtf` in `.user_defined_operators.yaml` (workspace root = all users, home folder = only you). See § 2.15 for schema and registration.
+
+**Promote local → shared when:** the same logic appears in ≥2 pipelines, the function already exists (or should exist) as a UC UDF/UDTF, or the Alteryx workflow calls a `.yxi` Custom Tool with a known Python implementation.
+
 
 ### Priority 4: SQL (ONLY after the mandatory pre-check passes, and only for these specific patterns)
 
@@ -143,13 +152,13 @@ For logic that is reused across multiple pipelines, register a shared UDO define
 - **QUALIFY** — row-level filter on window results
 
 **Do NOT use SQL for:**
-- Fixed-column string splitting — use **Transform** with `SPLIT` + `ELEMENT_AT`
-- Finite mappings / small Find Replace rules — use **Transform** CASE WHEN
+- Fixed-column string splitting — use **Prepare** formula with `SPLIT` + `ELEMENT_AT`
+- Finite mappings / small Find Replace rules — use **Prepare** formula CASE WHEN
 - Simple GROUP BY with SUM/COUNT/AVG — use **Aggregate** operator
 - COUNT(DISTINCT col) — use **Aggregate** with `COUNT_DISTINCT`
 - FIRST/LAST value per group — use **Aggregate** with `FIRST`/`LAST`
 - Simple deduplication — use **Unique** operator
-- Inline constant rows or tiny lookup tables — use **Enter Data** or **Transform** CASE WHEN
+- Inline constant rows or tiny lookup tables — use **Enter Data** or **Prepare** formula CASE WHEN
 
 ### Priority 5: Python (ABSOLUTE LAST RESORT — only for)
 
@@ -159,13 +168,13 @@ For logic that is reused across multiple pipelines, register a shared UDO define
 - **One-off custom logic** that does NOT warrant a UDO (≤1 pipeline uses it)
 
 #### Python must NEVER contain:
-- `F.withColumn("col", F.soundex(...))` → use **Transform**: `SOUNDEX(col) AS alias`
-- `F.withColumn("col", F.regexp_extract(...))` → use **Transform**: `REGEXP_EXTRACT(col, pattern, group) AS alias`
-- `F.withColumn("col", F.when(...).otherwise(...))` → use **Transform**: `CASE WHEN ... END AS alias`
+- `F.withColumn("col", F.soundex(...))` → use **Prepare**: `formula` with `SOUNDEX(col)`
+- `F.withColumn("col", F.regexp_extract(...))` → use **Prepare**: `formula` with `REGEXP_EXTRACT(col, pattern, group)`
+- `F.withColumn("col", F.when(...).otherwise(...))` → use **Prepare**: `formula` with `CASE WHEN ... END`
 - `df.groupBy(...).agg(F.sum(), F.avg(), ...)` → use **Aggregate** operator
-- `F.datediff(...)`, `F.current_date()` → use **Transform**: `DATEDIFF(...)`, `CURRENT_DATE()`
-- `F.lit(value)` → use **Transform**: `5.0 AS col_name`
-- `F.col("x").cast("double")` → use **Transform**: `CAST(x AS DOUBLE)`
+- `F.datediff(...)`, `F.current_date()` → use **Prepare**: `formula` with `DATEDIFF(...)`, `CURRENT_DATE()`
+- `F.lit(value)` → use **Prepare**: `formula` with a literal expression
+- `F.col("x").cast("double")` → use **Prepare**: `cast` action or `formula` with `CAST(x AS DOUBLE)`
 
 ---
 
@@ -177,10 +186,10 @@ Each distinct transformation purpose gets its own operator node. NEVER consolida
 
 | Step | Operator | Purpose |
 |------|----------|---------|
-| 1 | **Transform** | Derive new columns (SOUNDEX, REGEXP_EXTRACT, CASE WHEN) |
+| 1 | **Prepare** | Derive new columns (SOUNDEX, REGEXP_EXTRACT, CASE WHEN) |
 | 2 | **SQL** | Window function A (e.g., DENSE_RANK for group assignment) |
 | 3 | **SQL** (separate) | Window function B that depends on step 2's output (e.g., LAG partitioned by group_id) |
-| 4 | **Transform** | Simple derivation on window results (e.g., DATEDIFF on LAG output) |
+| 4 | **Prepare** | Simple derivation on window results (e.g., DATEDIFF on LAG output) |
 
 **❌ DO NOT consolidate into CTEs by default:**
 ```sql
@@ -192,7 +201,7 @@ SELECT *, DATEDIFF(...) FROM step2
 
 **✅ CORRECT: Separate operators for separate purposes:**
 ```
-Transform (derivations) → SQL (DENSE_RANK only) → SQL (LAG + NTILE) → Transform (DATEDIFF)
+Prepare (derivations) → SQL (DENSE_RANK only) → SQL (LAG + NTILE) → Prepare (DATEDIFF)
 ```
 
 #### When to ASK the user about consolidation:
@@ -207,30 +216,44 @@ If two adjacent SQL nodes both contain window functions, ASK the user:
 ### Decomposition Rule
 
 When an Alteryx tool's logic contains BOTH simple expressions AND complex operations (window functions, dedup), **always split into multiple operators**:
-- **Transform** for: CASE WHEN, COALESCE, constants, regex, type casts, string functions, date functions, arithmetic, SOUNDEX
+- **Prepare** for: CASE WHEN, COALESCE, constants, regex, type casts, string functions, date functions, arithmetic, SOUNDEX, fill_null, parse_date, parse_json
+- **Select** for: pick, rename, reorder, drop columns
 - **SQL** for: window functions (SUM OVER, ROW_NUMBER, NTILE, LAG/LEAD), CTEs, subqueries
 - **AI Function** for: creative/generative text on low-cardinality results (profiles, summaries)
 
 ---
 
-### What Transform CAN handle (do NOT use SQL or Python for these)
+### What Prepare CAN handle (do NOT use SQL or Python for these)
 
 | Category | Functions/Patterns | Example |
-|----------|-------------------|---------|
-| **Arithmetic** | +, -, *, /, ROUND, ABS, FLOOR, CEIL | `quantity * unit_price * (1 - discount_pct) AS net_amount` |
-| **Conditional** | CASE WHEN (up to ~10+ branches) | `CASE WHEN region = 'X' THEN val ... END AS col` |
-| **Null handling** | COALESCE, NVL, IFNULL | `COALESCE(unit_price, list_price) AS price_final` |
-| **String** | TRIM, UPPER, LOWER, INITCAP, CONCAT, SPLIT, ELEMENT_AT, SUBSTRING, LENGTH, REPLACE | `TRIM(INITCAP(name)) AS name`; `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` |
-| **Regex** | REGEXP_EXTRACT, REGEXP_REPLACE | `REGEXP_EXTRACT(email, '@(.+)$', 1) AS domain` |
-| **Phonetic** | SOUNDEX | `SOUNDEX(customer_name) AS name_soundex` |
-| **Date/Time** | TO_TIMESTAMP, TO_DATE, DATEDIFF, DATE_ADD, MONTHS_BETWEEN, YEAR, MONTH, DAYOFWEEK | `DATEDIFF(current_date(), last_date) AS days_ago` |
-| **Type casting** | CAST | `CAST(quantity AS DOUBLE)` |
-| **Literals/Constants** | Any fixed value | `5.0 AS trade_area_radius_km`, `'AUD' AS currency` |
-| **Passthrough** | `*` to keep all existing columns | First expr `"*"`, then add computed cols |
-| **Column selection** | List specific columns | `col1`, `col2`, `col3 AS renamed` |
-| **Find/Replace (small)** | CASE WHEN for ≤10 mappings | `CASE WHEN col = 'old' THEN 'new' ... END AS col` |
+|----------|-------------------|--------|
+| **Arithmetic** | +, -, *, /, ROUND, ABS, FLOOR, CEIL | `quantity * unit_price * (1 - discount_pct)` |
+| **Conditional** | CASE WHEN (up to ~10+ branches) | `CASE WHEN region = 'X' THEN val ... END` |
+| **Null handling** | COALESCE, NVL, IFNULL; fill_null action | `COALESCE(unit_price, list_price)` |
+| **String** | TRIM, UPPER, LOWER, INITCAP, CONCAT, SPLIT, ELEMENT_AT, SUBSTRING, LENGTH, REPLACE | `TRIM(INITCAP(name))`; `ELEMENT_AT(SPLIT(col, ','), 1)` |
+| **Regex** | REGEXP_EXTRACT, REGEXP_REPLACE | `REGEXP_EXTRACT(email, '@(.+)$', 1)` |
+| **Phonetic** | SOUNDEX | `SOUNDEX(customer_name)` |
+| **Date/Time** | TO_TIMESTAMP, TO_DATE, DATEDIFF, DATE_ADD, MONTHS_BETWEEN, YEAR, MONTH, DAYOFWEEK | `DATEDIFF(current_date(), last_date)` |
+| **Type casting** | CAST action or formula | `CAST(quantity AS DOUBLE)` |
+| **Literals/Constants** | Any fixed value | `5.0`, `'AUD'` |
+| **Multi-column** | multi_column_formula action — same expression applied to multiple columns using `{current_column}` placeholder | `if [{current_column}] <= 0 then 0 else [{current_column}]` |
+| **JSON** | parse_json action — name_value, typed_value, flatten_array, unnest | Parse VARIANT/JSON columns into typed columns |
+| **Bulk rename** | rename_columns action — snake_case, add_prefix, replace... | Rename all columns at once |
+| **Find/Replace (small)** | CASE WHEN for ≤10 mappings | `CASE WHEN col = 'old' THEN 'new' ... END` |
 
-### What REQUIRES SQL (cannot use Transform)
+**Prepare formulas run in order**: a later formula can reference a column created by an earlier formula in the same Prepare operator.
+
+### What Select CAN handle (column management only — NOT expressions)
+
+| Category | Functions/Patterns |
+|----------|-------------------|
+| **Pick columns** | List specific columns to keep |
+| **Rename** | alias a column to a new name |
+| **Reorder** | Change column order |
+| **Drop** | Omit columns from the output |
+| **Dynamic** | Keep/remove columns by type, name pattern, or metadata expression |
+
+### What REQUIRES SQL (cannot use Prepare or Select)
 
 | Pattern | Why |
 |---|---|
@@ -274,24 +297,24 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 #### Fuzzy Match + Make Group
 | Step | Operator | Expression |
 |------|----------|-----------|
-| 1 | **Transform** | `SOUNDEX(name) AS soundex`, `REGEXP_EXTRACT(email, ...) AS domain` |
+| 1 | **Prepare** | `SOUNDEX(name) AS soundex`, `REGEXP_EXTRACT(email, ...) AS domain` |
 | 2 | **SQL** | `DENSE_RANK() OVER (ORDER BY soundex, domain) AS group_id` |
 | 3 | **SQL** (separate — depends on group_id) | `LAG(txn_dt) OVER (PARTITION BY group_id ...) AS prev_dt` |
-| 4 | **Transform** | `DATEDIFF(txn_dt, prev_dt) AS days_since_prior` |
+| 4 | **Prepare** | `DATEDIFF(txn_dt, prev_dt) AS days_since_prior` |
 
 #### Customer Segmentation Macro (RFM)
 | Step | Operator | Logic |
 |------|----------|-------|
 | 1 | **Aggregate** | GROUP BY customer with MAX, COUNT, SUM, AVG, MIN |
-| 2 | **Transform** | `DATEDIFF(current_date(), last_txn_date) AS recency_days` |
+| 2 | **Prepare** | `DATEDIFF(current_date(), last_txn_date) AS recency_days` |
 | 3 | **SQL** | `NTILE(5) OVER (ORDER BY ...) AS r_score, f_score, m_score` |
-| 4 | **Transform** | `CASE WHEN r_score >= 4 AND f_score >= 4 THEN 'Champions' ...` |
+| 4 | **Prepare** | `CASE WHEN r_score >= 4 AND f_score >= 4 THEN 'Champions' ...` |
 | 5 | **AI Function** (optional, low-cardinality) | `ai_gen(CONCAT('Profile: ', ...)) AS customer_profile` |
 
 #### Geospatial (Coordinate Assignment + Ranking)
 | Step | Operator | Logic |
 |------|----------|-------|
-| 1 | **Transform** | CASE WHEN region → lat/lon (≤10 branches) |
+| 1 | **Prepare** | CASE WHEN region → lat/lon (≤10 branches) |
 | 2 | **SQL** | DISTINCT + `ROW_NUMBER() OVER (PARTITION BY region ORDER BY id)` |
 
 #### Summarize / GroupBy
@@ -305,7 +328,7 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 #### Find Replace / Standardize
 | Scenario | Operator |
 |----------|----------|
-| ≤10 known mappings | **Transform** CASE WHEN |
+| ≤10 known mappings | **Prepare** formula CASE WHEN |
 | 10-100 mappings | **Join** to lookup/reference table |
 | Unknown variations (low cardinality, creative) | **AI Function** |
 | Unknown variations (high cardinality) | Run AI on DISTINCT values once → save to table → **Join** |
@@ -316,20 +339,19 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 
 | ❌ Anti-Pattern | ✅ Correct Approach |
 |----------------|-------------------|
-| Monolithic Python with groupBy + withColumn + CASE WHEN + CSV write | Decompose: Aggregate → Transform → SQL (windows) → Transform → Python (CSV only) |
-| ai_gen() on millions of rows for standardization | Transform CASE WHEN or Join to lookup table |
-| SQL for simple COALESCE/CAST/TRIM/SOUNDEX/DATEDIFF | Transform operator |
-| Python F.lit(5.0) for constants | Transform: `5.0 AS col_name` |
-| Python F.soundex() or F.regexp_extract() | Transform: SOUNDEX(), REGEXP_EXTRACT() |
+| Monolithic Python with groupBy + withColumn + CASE WHEN + CSV write | Decompose: Aggregate → Prepare → SQL (windows) → Prepare → Python (CSV only) |
+| ai_gen() on millions of rows for standardization | Prepare CASE WHEN or Join to lookup table |
+| SQL for simple COALESCE/CAST/TRIM/SOUNDEX/DATEDIFF | Prepare formula action |
+| Python F.lit(5.0) for constants | Prepare: `formula` with literal `5.0` |
+| Python F.soundex() or F.regexp_extract() | Prepare: `formula` with `SOUNDEX()`, `REGEXP_EXTRACT()` |
 | Merging multiple unrelated windows into one SQL via CTEs without asking user | Separate SQL nodes: one per logical step; ASK before consolidating |
-| AI function when output must be deterministic | Transform CASE WHEN |
+| AI function when output must be deterministic | Prepare CASE WHEN |
 | AI function on high-cardinality table (millions of rows) | Run on DISTINCT values once → save → Join |
 | Fewer nodes via consolidation without asking user | Always default to MORE operators; ask before merging |
-| `sql` for Text To Columns into fixed N columns | `transform`: `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` — use `SPLIT` + `ELEMENT_AT` in Transform |
-| `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `transform` CASE WHEN for deterministic mappings |
-| `sql` JOIN to a ≤10-row lookup table for Find Replace | `transform` CASE WHEN — small finite mappings should stay visual |
+| `sql` for Text To Columns into fixed N columns | `prepare`: `formula` with `ELEMENT_AT(SPLIT(col, ','), 1) AS part1` — use `SPLIT` + `ELEMENT_AT` in Prepare |
+| `sql` for inline constant rows or lookup tables with ≤10 rows | Use `python` `spark.createDataFrame(...)` for real inline row sources, or `prepare` `formula` CASE WHEN for deterministic mappings |
+| `sql` JOIN to a ≤10-row lookup table for Find Replace | `prepare` `formula` CASE WHEN — small finite mappings should stay visual |
 | Skipping the mandatory pre-check and jumping straight to `sql` | Answer all 9 pre-check questions first; only then use `sql` |
-| Writing raw `python` for custom logic without considering a VDP UDO | First try **local UDO creation** from the sidebar (`+ Create user-defined operator` → describe it → Generate preview). If the logic will be reused across files, promote it to a shared UDO (`python-run-function`, `uc-udf`, or `uc-udtf`). See Priority 3 and §2.15. |
 | `sql` ROW_NUMBER for simple deduplication | Use visual `unique` operator — `unique_by_all_columns: false` + `columns` + optional `sort_expressions` |
 | `python` `spark.createDataFrame(...)` for small inline/lookup tables | Use visual `enter_data` operator with markdown-style table syntax |
 | `sql` COUNT(DISTINCT col) in GROUP BY | Use visual `aggregate` with `fn: COUNT_DISTINCT` — now natively supported |
@@ -345,8 +367,10 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | Passing VARIANT columns to downstream Transform/Join operators | ai_parse_document and ai_extract return VARIANT. Designer preview fails with `UNSUPPORTED_OPERATION` on VARIANT. **Always CAST to STRING/DOUBLE/etc inline** in the same SQL — never let VARIANT flow downstream. |
 | `TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy')` on AI-extracted dates | AI-extracted dates often come in mixed formats (MM/dd/yyyy, yyyy-M-d, dd-MMM-yyyy). Use `COALESCE(TRY_TO_TIMESTAMP(col, 'MM/dd/yyyy'), TRY_TO_TIMESTAMP(col, 'yyyy-M-d'), TRY_TO_TIMESTAMP(col, 'dd-MMM-yyyy'))` in a Transform. |
 | Reusable Python logic duplicated across pipelines | Promote to a **UDO** (`uc-udf` for row-level, `uc-udtf` for multi-row, `python-run-function` for external calls). Register once, reuse everywhere as a visual operator. |
-| `python` node calling a UC UDF via `spark.sql("SELECT my_udf(...)")` | Prefer a **UDO** instead — either generate a local UDO from the sidebar for this file, or register a shared **`uc-udf` UDO** if the function should be reused. |
-| `sql` calling a UC UDTF via `SELECT * FROM my_udtf(TABLE(...))` | Prefer a **UDO** instead — either generate a local UDO from the sidebar for this file, or register a shared **`uc-udtf` UDO** for reuse. |
+| Writing raw `python` for custom logic without considering a VDP UDO | First try a **local / inline UDO** from the sidebar (`+ Create user-defined operator` → describe it → Generate preview). If the logic will be reused across files, register a shared UDO. |
+
+| `python` node calling a UC UDF via `spark.sql("SELECT my_udf(...)")` | Use a **`uc-udf` UDO** instead — it makes the function a drag-and-drop operator in the palette, with proper type checking and documentation. |
+| `sql` calling a UC UDTF via `SELECT * FROM my_udtf(TABLE(...))` | Use a **`uc-udtf` UDO** instead — wraps the UDTF as a visual operator with explicit input/output column mapping. |
 
 
 ---
@@ -365,22 +389,37 @@ When an Alteryx tool's logic contains BOTH simple expressions AND complex operat
 | `output` | Output | `data` | (terminal) | Three output types: **Table** (`output_type: table`) — `catalog`, `schema`, `table_name`; **Materialized View** (`output_type: materialized_view`) — publishes as an MV in UC that refreshes on each run; **File** (`output_type: file`) — `catalog`, `schema`, `volume`, `file_name`, `file_type: csv/json/excel`. **Write modes** (table & file): `overwrite` (default), `append` (adds rows to existing), **`merge`** (table only — upserts by `merge_keys`). Preview is read-only (expected `TABLE_OR_VIEW_NOT_FOUND` on first run); actual write happens on Run All. |
 | `ai_function` | AI Function | `data` | `ai_data` | `expressions: [SQL expressions calling ai_* functions]` (returns those columns plus `*`) |
 | `aggregate` | Aggregate | `data` | `aggregated_data` | `group_bys: [{expr, type: expr}, ...]`, `aggregations: [{columnExpr: {expr, type: expr}, fn, alias}, ...]`. Supported `fn`: AVG, COUNT, **COUNT_DISTINCT**, **FIRST**, **LAST**, **CONCAT**, MAX, MEAN, MEDIAN, MIN, PERCENTILE, STDDEV, SUM, VARIANCE. FIRST/LAST are non-deterministic without upstream Sort. CONCAT joins strings with optional `separator` (default `", "`). |
-| `combine` | Combine | `data_0`, `data_1` | `combined_data` | `operator`: UNION / INTERSECT / EXCEPT / MINUS; `quantifier`: ALL / DISTINCT |
+| `combine` | Combine | `data` (ONE variadic port — wire every input to `data`) | `combined_data` | `operator`: UNION / INTERSECT / EXCEPT / MINUS; `quantifier`: ALL / DISTINCT; optional `union_by_name` + `allow_missing_columns` (Alteryx Union "By Name"). Older versions used separate `data_0` / `data_1` ports — do not emit those. |
 | `filter` | Filter | `data` | `filtered_data` (v1.0.0) **or** `filtered_data` + `excluded_data` (v2.0.0) | `condition: "<SQL boolean expression>"`. **v2.0.0** (recommended) emits **two output ports**: `filtered_data` (matching rows — Alteryx True) and `excluded_data` (non-matching — Alteryx False). Maps directly to Alteryx Filter T/F. Always use `templateVersion: 2.0.0` when both branches are needed. |
-| `join` | Join | `left`, `right` | `joined_data` (standard) **or** `joined_data` + `left_unmatched` + `right_unmatched` (split_join) | `join_type`: inner / left / right / full / cross_join / **split_join**; `join_conditions: "left.col_a = right.col_b AND ..."` (always use the `left.` / `right.` aliases). Optional `expressions: [select-expressions]` — **always set explicit expressions** (never empty `[]`). **split_join** (recommended for Alteryx Join) produces 3 output ports mapping directly to Alteryx L/J/R. |
+| `join` | Join | Several inputs on ONE input port in current versions (older versions used separate `left` / `right` ports — confirm the port name and how the left/right roles are assigned in the live catalog, Step 0) | `joined_data` (standard) **or** `joined_data` + `left_unmatched` + `right_unmatched` (split_join) | `join_type`: inner / left / right / full / cross_join / **split_join**; `join_conditions: "left.col_a = right.col_b AND ..."` (always use the `left.` / `right.` aliases). Optional `expressions: [select-expressions]` — **always set explicit expressions** (never empty `[]`). **split_join** (recommended for Alteryx Join) produces 3 output ports mapping directly to Alteryx L/J/R. |
 | `limit` | Limit | `data` | `limited_data` | `n: <integer>` — verified |
 | `pivot` | Pivot | `data` | `pivoted_data` | **Rows → Columns mode**: `mode: pivot`, `group_by: [<col>, ...]`, `pivot_column: <col>`, `value_column: <col>`, `agg: count\|sum\|avg\|min\|max`. **Columns → Rows mode**: `mode: unpivot`, `id_columns: [...]`, `value_columns: [...]`, `key_name: <out_key>`, `value_name: <out_value>` — verified |
-| `sort` | Sort | `data` | `sorted_data` | `sort_expressions: [{columnExpr: {expr, type: expr}, sortBy: ASC / DESC}, ...]` |
+| `sort` | Sort | `data` | `sorted_data` | `sort_expressions: [{columnExpr: {expr, type: expr}, sortBy: ASC / DESC}, ...]`. **`expr` must be a column name — Sort cannot sort by a formula.** Compute the sort key in an upstream Prepare `formula` action, then sort on that column. |
 | `sql` | SQL | `data` (LIST), plus `data__sources` (LIST of `{node, output_port, name, df_name}`) | `result` | `query: "<SQL>"` — references each upstream by its operator `name` as a temp view; supports `:param` widget bindings |
-| `transform` | Transform | `data` | `transformed_data` | `expressions: ["*", "expr AS \`alias\`", ...]` — `selectExpr`-style strings; `"*"` keeps all upstream columns |
+| `transform` | Select | `data` | `transformed_data` | `expressions: ["*", "expr AS \`alias\`", ...]` — `selectExpr`-style strings; `"*"` keeps all upstream columns. **NOTE**: In the UI this operator is now called **Select** and only picks/renames/reorders/drops columns. For expressions (CASE WHEN, CAST, arithmetic), use `prepare` with a `formula` action instead. The `template: transform` name is kept for backward compatibility in YAML. |
 | `python` | Python | `data` (LIST) | `result` | `code: "<PySpark>"` — `inputs["data"][i]`; assign final DataFrame to `result` |
 | `markdown` | Note | (none) | (none) | `md: "<Markdown body>"`; optional `dimensions: {width, height}` |
 | `group` | Group | (visual only) | (visual only) | `config: {}`, `input: []`, plus `position: {x, y}` and `dimensions: {width, height}`. Children are not wired via the YAML; place child operator cells inside the bounding box visually. Verified — imports cleanly and renders as a labeled container. |
-| `prepare` | Prepare | `data` | `prepared_data` | `actions: [{type, column, ...}, ...]` — ordered list of typed actions: `formula` (arbitrary SQL expr), `cast` (type change), `replace_value` (value substitution), `fill_null`, `text_case` (lower/upper/title), `trim`, `regex_replace`, `extract` (regex capture), `parse_date`. Each action mutates in sequence. |
+| `prepare` | Prepare | `data` | `prepared_data` | `actions: [{type, column, ...}, ...]` — ordered list of typed actions: `formula` (arbitrary SQL expr), `cast` (type change), `replace_value` (value substitution), `fill_null` (the replacement value goes in the `with` key), `text_case` (lower/upper/title), `trim`, `regex_replace`, `extract` (regex capture), `parse_date`, `parse_json`, `multi_column_formula`, `rename_columns`. Each action mutates in sequence. **All calculations belong here** (not in Select). |
 | `unique` | Unique | `data` | `unique_data` | `unique_by_all_columns: true` (full-row dedup) or `false` + `columns: [key_cols]` (subset dedup). Optional `sort_expressions` to control which row survives. |
 | `enter_data` | Enter Data | (none) | `data` | `data: "| col1 | col2 |\n| --- | --- |\n| val1 | val2 |"` — markdown-style inline table. Use for small lookup/constant tables. |
 | `visualization` | Visualization | `data` | `data` | `editorSpec: {type, xAxis, yAxis, ...}` — inline chart. Types: bar, line, area, scatter, pie, table, histogram, box, heatmap, combo, counter, funnel, etc. Aggregates internally — do NOT add a separate aggregate upstream. |
 | *(UDO name)* | User-Defined Operator | `data` | `result` | Registered via `.user_defined_operators.yaml`; the YAML `template` field matches the UDO's registered identifier (not a fixed string). Three subtypes: **`uc-udf`** — UC UDF, row-level column transform; **`uc-udtf`** — UC UDTF, multi-row/stateful (ML scoring, clustering); **`python-run-function`** — standalone Python callable, no UC dependency. Config varies by subtype — see [UDO reference](https://learn.microsoft.com/en-us/azure/databricks/designer/user-operators/). |
+| `inline_udo` | Inline custom operator | `data` | (per definition) | Custom logic defined inside the pipeline itself (no registration needed). Use when logic is pipeline-specific and no visual operator or Prepare action fits — preferred over `sql` / `python`. Take config keys from the live catalog. |
+| `guardrails` | Guardrails | `data` | `passed`, `failed`, `errors` | Data quality rules; `on_failure: warn / block / stop`. Maps Alteryx Test, Message (error/warning) and reject branches. |
+| `notifications` | Notifications | `data` | (terminal / pass-through) | Email notification. Maps the Alteryx Email tool and "send on error" event settings. |
+| `html` | HTML | `data` | (rendered) | Custom HTML report. Maps Alteryx Render / Layout / Table / Report Text when a Visualization is not enough. |
+| `source` (Google Drive) | Source — Google Drive | (none) | `data` | Reads Sheets / CSV / Excel from Google Drive through the workspace connector. Use for Alteryx Google Sheets Input and Drive-hosted files instead of asking for manual downloads. |
+| `source` (Microsoft 365) | Source — Microsoft 365 | (none) | `data` | Reads Excel / CSV from SharePoint / OneDrive through the workspace connector. Use for Alteryx SharePoint Input / OneDrive tools. |
+| *(pipeline parameters)* | Parameters | n/a | n/a | Pipeline-level parameters referenced from operators (e.g. `:param` in SQL, parameterized paths/table names). Map Alteryx Interface tools, Control/Action parameters and workflow constants here. See Step 4 Dynamic Table References. |
+
+> The rows above are a snapshot. Exact config keys and port names for the newer operators (inline custom operator, guardrails, notifications, HTML, Drive / Microsoft 365 sources, parameters) must be taken from the live catalog at Step 0.
+
+### Reference files
+
+| Read when | File |
+|---|---|
+| Full config, YAML examples, ports, and Alteryx mapping patterns for Notifications, Visualization, HTML, Guardrails, Group, Inline UDO, Enter Data, Unique, Markdown, Parameters, plus 6 new AI functions (ai_decide, ai_parse_document, ai_prep_search, ai_query, ai_transcribe), Output advanced features (split, cell-range, merge), Join multi-table and case-insensitive keys, Aggregate type-specific functions, and Filter port name updates | [new-operators-reference.md](new-operators-reference.md) |
 
 Anything Alteryx does that doesn't map to one of these uses `python`, `sql`, or `ai_function`. If none of them can express it (UI forms, rendered reports, etc.), mark it **MANUAL** and emit a `markdown` node explaining what the user must do outside the pipeline.
 
@@ -444,7 +483,7 @@ AI functions are appropriate ONLY when:
 2. The table has **low cardinality** (thousands of rows, NOT millions)
 3. There is **no deterministic equivalent** (CASE WHEN, lookup table, regex cannot do it)
 
-❌ **NEVER use AI for:** finite known mappings (product name standardization → CASE WHEN), coordinate lookups (→ CASE WHEN), rule-based assignments (RFM segments → CASE WHEN), any table with millions of rows.
+❌ **NEVER use AI for:** finite known mappings (product name standardization → Prepare CASE WHEN), coordinate lookups (→ Prepare CASE WHEN), rule-based assignments (RFM segments → Prepare CASE WHEN), any table with millions of rows.
 
 ✅ **Good AI use:** generating natural-language customer profiles from RFM scores, sentiment analysis on free-text reviews, semantic similarity for fuzzy matching when SOUNDEX is insufficient.
 
@@ -478,7 +517,7 @@ UDOs are reusable visual operators backed by Unity Catalog functions or standalo
 | Same logic appears in multiple pipelines and should be maintained in one place | Any subtype |
 
 **Do NOT use a UDO when:**
-- The operation is expressible with a built-in operator (Transform, SQL, Aggregate, etc.) — built-ins are always preferred.
+- The operation is expressible with a built-in operator (Prepare, Select, SQL, Aggregate, etc.) — built-ins are always preferred.
 - The custom logic is one-off and pipeline-specific — use `python` instead.
 
 **YAML note:** Unlike built-in operators, the `template` field for a UDO is the UDO's own registered identifier string (not a fixed value like `transform` or `sql`). The exact YAML schema depends on the UDO subtype — consult the [UDO YAML reference](https://learn.microsoft.com/en-us/azure/databricks/designer/user-operators/) before emitting a UDO cell.
@@ -558,12 +597,15 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 | Browse | *omit* | Browse is just a preview tile — no VDP analog needed |
 | Text Input | `enter_data` | Inline table with markdown-style syntax (header row + separator + data rows). Use `enter_data` for small static lookup/constant tables. Fall back to `python` `spark.createDataFrame` only for programmatic row generation. |
 | Directory | `python` | `os.listdir` over a Volume path; see Step 4 |
-| Date/Time Now | `transform` | `current_timestamp()` / `current_date()` |
+| Date/Time Now | `prepare` (formula) | `current_timestamp()` / `current_date()` |
+| Google Sheets Input / Drive files | `source` (Google Drive) | Native connector source; no download step |
+| SharePoint / OneDrive Input | `source` (Microsoft 365) | Native connector source; no download step |
+| Any third-party system (SaaS, external DB, FTP, API, partner feed) | **STOP — ask user** | See Step 4 "Third-party data sources": offer a Databricks connection option or generate an IT ticket |
 | Input Data (.xlsx — full file, single sheet) | **`source`** (native) or `python` | **Preferred**: `source` with `file_source: {path, format: excel}` — reads natively via `read_files`. Requires [Excel File Format Support](https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/volumes-read-write#excel) enabled. Fall back to `python` `pandas.read_excel()` only if the feature is disabled or for `.xlsb`/`.xls` legacy formats. See §4 Excel Ingest Patterns. |
 | Input Data (.xlsx — specific sheet/range/named range) | `python` | `pandas.read_excel(sheet_name=, usecols=, skiprows=, nrows=, header=)`; see §4 Excel Ingest Patterns |
 | Input Data (.xls legacy) | `python` | `pandas.read_excel(engine='xlrd')`; see §4 Excel Ingest Patterns |
 | Output Data (.xlsx — simple) | **`output`** (file mode) | `output_type: file`, `file_type: excel`, `write_mode: overwrite/append` — **native, no Python** |
-| Output Data (.xlsx — multi-sheet/formatted/template, or a required sheet name like `file.xlsx\|\|\|BaseData`) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns. Serverless environment v5 does **not** ship `openpyxl` (`ModuleNotFoundError`): declare it in the notebook's `environmentMetadata.dependencies: ["openpyxl"]`. Write to a local temp file, then `shutil.copyfile` to the Volume. `python` (and `sql`) operators receive `inputs["data"]` as a **list** plus `data__sources`, so wire them that way even with one upstream. |
+| Output Data (.xlsx — multi-sheet/formatted/template) | `python` | `toPandas()` → `openpyxl` write to UC Volume; see §4 Excel Write-back Patterns |
 | Output Data (materialized view) | `output` (MV mode) | `output_type: materialized_view` — publishes as an MV in UC, refreshes on each run |
 | Input Data (PDF — form/document) | `sql` or `python` | `ai_parse_document()` → `ai_extract()` chain; see §4 PDF Parse Patterns |
 | Map Input | **MANUAL** | Designer-only; replace with a Volume-hosted file |
@@ -572,22 +614,22 @@ The mapping is grouped by Alteryx's official tool categories so tools can be loc
 
 | Alteryx Tool | VDP Operator | Notes |
 |---|---|---|
-| Auto Field | `transform` | Cast columns; let Spark infer or pick narrowest type |
-| Data Cleansing (whitespace / case / nulls) | `transform` | TRIM, LOWER/UPPER, REPLACE, NULLIF |
+| Auto Field | `prepare` (cast) | Cast columns; let Spark infer or pick narrowest type |
+| Data Cleansing (whitespace / case / nulls) | `prepare` | `trim`, `text_case`, `replace_value`, `fill_null` (value in `with`) actions |
 | Data Cleansing (grammar / typos) | `ai_function` | `ai_fix_grammar(text)` |
 | Data Cleansing (PII redaction) | `ai_function` | `ai_mask(text, ARRAY('EMAIL','PHONE','SSN',...))` |
 | Filter | `filter` | `config.condition` is a free-form SQL boolean string. Designer's Filter now has **two output ports**: `filtered_data` (rows where condition is true) and `excluded_data` (complement). This maps directly to Alteryx's T/F outputs — use ONE filter operator and wire T→`filtered_data`, F→`excluded_data`. No need for two filters with inverse conditions. |
-| Formula | `transform` | One row per output column with a SQL expression |
-| Imputation (simple null fill with constant/other col) | `transform` | `COALESCE(col, fallback_col) AS col` — use Transform when filling from another column or a constant. **Prefer Transform over SQL.** |
+| Formula | `prepare` (formula) | One `formula` action per output column. Select cannot calculate. Watch for Alteryx case-insensitive functions (§15j) |
+| Imputation (simple null fill with constant/other col) | `prepare` | `fill_null` action (replacement in `with`) or a `formula` with `COALESCE(col, fallback_col)`. **Prefer Prepare over SQL.** |
 | Imputation (fill with aggregate like median/mean) | `sql` | `COALESCE(col, AVG(col) OVER ())` — use SQL only when the fill value requires a window/aggregate calculation |
-| Multi-Field Formula | `transform` | Apply same expression to a list of columns |
+| Multi-Field Formula | `prepare` (multi_column_formula) | Apply same expression to a list of columns |
 | Multi-Row Formula | `sql` | `LAG`/`LEAD` window functions |
 | Random % Sample | `sql` | `WHERE rand() < 0.1` (with seed if reproducibility needed) |
 | Record ID | `sql` | `ROW_NUMBER() OVER (ORDER BY ...)` |
 | Sample / First N / Last N / Skip 1st N | `limit` or `sql` | First N → `limit`; Last N → `ROW_NUMBER` desc + filter |
 | Select | `transform` | Reorder, rename, drop, retype |
 | Select Records | `sql` | Range-based: `WHERE rn BETWEEN a AND b` |
-| Sort | `sort` | One or more `column ASC|DESC` |
+| Sort | `sort` | One or more `column ASC|DESC`. Column names only — if Alteryx sorts on a derived value, add a Prepare formula first |
 | Tile | `sql` | `NTILE(n) OVER (...)` |
 | Unique | `unique` | Visual **Unique** operator: `unique_by_all_columns: true` for full-row dedup, or set `false` with `columns: [key_cols]` for subset dedup. Add `sort_expressions` to control which row is kept. Output port: `unique_data`. Only use SQL ROW_NUMBER for complex dedup with multiple window partitions. |
 
@@ -750,9 +792,9 @@ See Step 11 for full handling.
 
 ### 2.15 User-Defined Operators (UDO)
 
-UDOs are a VDP-native feature for packaging custom logic as a **first-class visual operator** that appears in the Designer palette. **Always prefer a UDO over a raw `python` or `sql` node** — even for one-off logic, a local UDO keeps the pipeline visual.
+UDOs are a VDP-native feature for packaging reusable logic as a **first-class visual operator** that appears in the Designer palette. They are the preferred path for custom functions that are reused across pipelines — **always prefer a UDO over a raw `python` node** when the logic is reusable.
 
-#### Local UDO — AI-Generated (TRY THIS FIRST)
+#### Local / inline UDO — AI-Generated (TRY THIS FIRST)
 
 The fastest way to create a custom operator. No YAML authoring needed:
 
@@ -774,16 +816,17 @@ For logic used across multiple pipelines, define a YAML file with the `user-defi
 
 #### When to create/use a UDO
 
-| Alteryx Pattern | UDO Approach | Notes |
+| Alteryx Pattern | UDO Subtype | Notes |
 |---|---|---|
-| Any tool with no built-in VDP equivalent | **Local UDO** (describe it → Generate preview) | Fastest path; stays visual; no YAML needed |
-| Python Tool with a row-level formula already registered as a UC UDF | **Shared `uc-udf`** | Maps each input row through the UDF; output is a new column |
-| Python Tool performing ML scoring via an MLflow model | **Shared `uc-udtf`** | UDTF accepts the full table, applies the model, returns scored rows |
-| Python Tool calling an external API (e.g. Slack, email, enrichment service) | **Shared `python-run-function`** | Standalone Python callable; no UC required |
-| Custom Tool (`.yxi`) with a known Python implementation | **Local UDO** (then promote to shared if reusable) | Describe the .yxi logic → generate → test |
-| Tax calculation / compliance formula reused across jurisdictions | **Shared `uc-udf`** | Register once in UC, reuse across all tax pipelines |
-| Data quality / validation rule library | **Shared `uc-udf` or `uc-udtf`** | Standard DQ checks become drag-and-drop operators |
-| R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first |
+| Any tool with no built-in VDP equivalent | `inline_udo` (local, describe it → Generate preview) | Fastest path; stays visual; no YAML needed. Promote to shared if reused. |
+
+| Python Tool with a row-level formula already registered (or planned) as a UC UDF | `uc-udf` | Maps each input row through the UDF; output is a new column. Prefer over `python` when the function is already in UC. |
+| Python Tool performing ML scoring via an MLflow model | `uc-udtf` | UDTF accepts the full table, applies the model, returns scored rows. Cleaner and more reusable than `python` with `mlflow.pyfunc.load_model`. |
+| Python Tool calling an external API (e.g. Slack, email, enrichment service) | `python-run-function` | Standalone Python callable; no UC required. Keeps pipeline logic consistent without embedding credentials in a raw `python` cell. |
+| Custom Tool (`.yxi`) with a known Python implementation | `uc-udtf` or `python-run-function` | Assess whether the logic generalizes; if yes, register as UDO. If one-off, use a `python` node instead. |
+| Tax calculation / compliance formula reused across jurisdictions | `uc-udf` | Register once in UC, reuse across all tax pipelines. |
+| Data quality / validation rule library | `uc-udf` or `uc-udtf` | Standard DQ checks become drag-and-drop operators. |
+| R Tool | `python` (flag **REVIEW**) | R has no UDO path; re-implement in PySpark or Python first. |
 
 #### UDO YAML templates
 
@@ -952,6 +995,59 @@ When converting a `python` operator, always ask:
 
 Under the hood, Designer's Source compiles `file_source` into `SELECT * FROM read_files("<path>", <opts>)`. Any option that `read_files` accepts will be passed through (e.g. `multiLine`, `delimiter`, `dataAddress` for spark-excel). Volume paths (`/Volumes/...`) are reliable for both preview and full execution.
 
+### Third-party data sources (STOP and ask the user)
+
+When an Alteryx input reads from a system that is not already in Unity Catalog or a UC Volume (SaaS app, external database, SFTP/FTP, REST API, partner feed, network share, mainframe extract), **stop and give the user two options**. Do not invent a path, mock the data, or silently substitute a sample file.
+
+> "The Alteryx workflow reads `<object>` from `<system>`, which isn't available in Databricks yet. Two options:
+> 1. **Connect it with a Databricks option** — I can recommend the right one and set it up if you have access.
+> 2. **Raise an IT ticket** — I'll generate a ready-to-paste ticket for your platform team."
+
+**Option 1 — Databricks connection options** (recommend the best fit):
+
+| Source type | Databricks option |
+|---|---|
+| SaaS apps (Salesforce, Workday, ServiceNow, HubSpot, Google Ads, ...) and CDC from MySQL / PostgreSQL / SQL Server | **Lakeflow Connect** managed ingestion |
+| External databases / warehouses to query in place (Snowflake, Redshift, SQL Server, Oracle, Postgres, BigQuery, ...) | **Lakehouse Federation** foreign catalog → `table_source` |
+| Files landing in cloud storage (S3 / ADLS / GCS) on a schedule | **Auto Loader** into a table, or a **UC Volume** read by `source` |
+| One-off or manual files | Upload to a **UC Volume** |
+| Google Sheets / Drive files | **Google Drive connector** source |
+| SharePoint / OneDrive / Excel Online | **Microsoft 365 connector** source |
+| Data owned by another organization or Databricks account | **Delta Sharing** |
+
+**Option 2 — IT ticket.** Generate the ticket filled in from the Alteryx XML (connection strings, table/query names, file paths) and leave `<TBD>` for anything unknown:
+
+```text
+Title: Data access request — <system> for Lakeflow Designer pipeline <pipeline name>
+
+Source system:        <system name, host/URL, environment>
+Objects needed:       <tables / views / reports / file paths / API endpoints>
+Columns / filters:    <columns used by the workflow, any WHERE clause from the Alteryx query>
+Refresh frequency:    <e.g. daily 06:00, monthly after close, on demand>
+Ingestion method:     <Lakeflow Connect / Lakehouse Federation / Auto Loader / Volume / connector / Delta Sharing>
+Target location:      <catalog.schema.table or /Volumes/catalog/schema/volume/path>
+Permissions needed:   <e.g. USE CATALOG, USE SCHEMA, SELECT on target; READ VOLUME; service principal / connection owner>
+Requested for:        <user / group / service principal that runs the pipeline>
+Data owner:           <business owner of the source data>
+Data sensitivity:     <public / internal / confidential / PII / regulated — list sensitive columns>
+Business reason:      Migration of Alteryx workflow <file name> to Lakeflow Designer
+```
+
+Record the chosen option (or the ticket) in the workflow documentation file (Step 16). Continue converting the rest of the workflow with the source wired to its planned target location so the pipeline runs once access lands.
+
+### CSV ingest pitfalls (check every CSV source)
+
+Preview every CSV `source` before building on it, and compare against the Alteryx Input Data configuration in the XML (`<FormatSpecificOptions>`: delimiter, header row, code page, first-row-contains-data).
+
+| Symptom in preview | Cause | Fix |
+|---|---|---|
+| One single column whose name contains `;` (e.g. `Date;Account;Amount`) | Semicolon-delimited CSV (common in European exports) read with the default comma | Set `delimiter: ";"` in `file_source`. Copy the delimiter from the Alteryx Input tool config |
+| Numbers read as strings like `1.234,56` | Comma used as decimal separator | Convert in a Prepare formula (§15m). Never CAST directly — it returns NULL or fails |
+| Column names with trailing spaces, special characters, or dates | Raw export headers | See §15h, §15i, §15l |
+| Garbled accents (`Ã©`) | Wrong encoding | Set `encoding` (e.g. `ISO-8859-1`, `windows-1252`) to match the Alteryx code page |
+| Header row appears as data / first data row lost | `header` mismatch | Match the Alteryx "First row contains field names" setting |
+| Summary / total rows at the bottom | Exported report footer | Filter them out (§15o) |
+
 ### Avoid: Workspace Paths with `file:` Prefix
 
 - Paths like `file:/Workspace/Users/user@company.com/...` FAIL on full reads — the `@` causes URI authority errors.
@@ -963,7 +1059,7 @@ In-DB / DCM input queries often filter on the run date, for example `WHERE Repor
 
 - Replace the run-date expression with a pipeline parameter (e.g. `:reporting_month`) whose **default reproduces the Alteryx behavior** (current month), so production semantics are unchanged.
 - Before validating, check which periods actually exist in the source (`SELECT DISTINCT ReportingMonth ...`) and run validation with the parameter set to a period that has data. Tell the user which value you used.
-- Document the parameter and its default in the workflow documentation.
+- Document the parameter and its default in the workflow `.md` (Step 16).
 
 ### Dynamic Table References (Parameterized Pipelines)
 
@@ -1164,7 +1260,7 @@ Use a Python `env_config` operator for environment-specific catalogs/schemas:
 
 > **ALWAYS prefer the native `output` operator** for simple Excel/CSV/JSON file writes. Only fall back to `python` when you need multi-sheet workbooks, cell-level formatting, or template injection.
 
-**IMPORTANT**: Always materialize to a Delta table first (Step 9a canonical output), then add the Excel write-back as a secondary sink. The Delta table is the source of truth.
+**IMPORTANT**: The output destination is the user's choice (Step 9a). If the user chose Delta + Excel, materialize the Delta table first and add the Excel write-back as a secondary sink — the Delta table is then the source of truth. If the user chose an Excel export only, the native `output` with `output_type: file` is the final sink.
 
 #### Pattern A0: Native Excel output (PREFERRED for simple writes)
 
@@ -1844,7 +1940,21 @@ Excel/CSV sources may contain error values like `#`, `#N/A`, `#VALUE!`, `#REF!`.
 
 ## Step 9: Output — Always Materialize
 
-### 9a. Canonical Delta output (REQUIRED)
+### 9a. Ask the user for the output destination (REQUIRED)
+
+**Always ask the user** how they want the results delivered before configuring the final `output` operator. Do not assume Delta, and do not assume the format the Alteryx workflow originally wrote. Ask:
+
+> "How would you like the results of this pipeline delivered?
+> 1. A Unity Catalog Delta table (please give `catalog.schema.table_name`)
+> 2. A file export to a UC Volume — CSV, Excel, or JSON (please give the format, Volume path, and file name)
+> 3. Both a Delta table and a file export"
+
+- Mention the format the original Alteryx Output Data tool used (e.g. "the Alteryx workflow wrote `IC_Loans.xlsx`") so the user can choose to keep it.
+- Also confirm the write mode (overwrite / append / merge — merge is table only).
+- For formats the native `output` cannot write (Parquet, Avro, ORC, XML, TSV, fixed-width), tell the user a `python` sink is required (see 9c).
+- Record the user's choice in the workflow documentation file (Step 16).
+
+### 9b. Delta table output (when the user chooses a table)
 
 Every converted workflow MUST end with an `output` operator. The output operator (v4.0.0) supports **table**, **materialized view**, and **file** output types with **overwrite**, **append**, and **merge** (table only) write modes:
 
@@ -1866,7 +1976,7 @@ Every converted workflow MUST end with an `output` operator. The output operator
 - Preview the output node — "no columns" with no error = success.
 - "no compute attached" = user needs to click Run.
 
-### 9b. Additional output types (optional, downstream of or instead of 9a)
+### 9c. File exports and other output types (when the user chooses a file, or in addition to 9b)
 
 The `output` operator (v4.0.0) supports three output types and three write modes:
 
@@ -1944,7 +2054,7 @@ Fall back to `python` only for formats not supported by the native output operat
       output_port: <last_operator_output_port>
 ```
 
-For external DB writes, use a `python` operator with `df.write.format("jdbc")` or write into a UC Federation catalog. The Delta table from 9a remains the canonical output — file/DB writes are sinks, not the source of truth.
+For external DB writes, use a `python` operator with `df.write.format("jdbc")` or write into a UC Federation catalog. When the user chose both a Delta table and a file export, the Delta table from 9b is the canonical output and file/DB writes are secondary sinks. When the user chose a file export only, the file `output` is the final sink.
 
 ---
 
@@ -1960,6 +2070,19 @@ For external DB writes, use a `python` operator with `df.write.format("jdbc")` o
 > "To validate the converted pipeline produces correct results, I need an expected output file — typically the CSV/Excel that the Alteryx workflow originally produced. Could you provide that file? (Upload it or place it in a UC Volume path.)"
 
 Do not skip validation or assume the pipeline is correct without comparing against known-good output.
+
+**If the user confirms no expected output exists**, do NOT skip validation — use the step-by-step re-run method in 10a-alt instead.
+
+### 10a-alt. Validation without an expected output file (re-run the Alteryx logic)
+
+When no known-good output exists, rebuild the Alteryx logic independently as a check:
+
+1. **Walk the Alteryx DAG in order** (tool by tool, or one container at a time). For each step, read the tool config from the XML (formula text, filter condition, join keys, Summarize fields).
+2. **Compute the expected result for that step independently** — a temporary `sql` node that implements the Alteryx expression literally from the XML, fed from the same upstream data as the pipeline operator.
+3. **Compare with temporary steps**: row counts, `EXCEPT ALL` in both directions on key columns, and SUM/MIN/MAX of numeric columns between the pipeline operator and the temporary check. Investigate any difference before moving to the next step — errors compound downstream.
+4. **Pay special attention** to the known divergence points: case-insensitive Contains (§15j), text-vs-number filters (§15n), comma decimals (§15m), disabled containers (§15k), total rows (§15o).
+5. **Remove every temporary step** once the step matches (same cleanup rule as 10h).
+6. **Report and document**: tell the user the validation was done by re-running the logic rather than against Alteryx output, and record per-step results in the documentation file (Step 16b item 7). Recommend a one-time comparison with a real Alteryx run when possible.
 
 ### CRITICAL: Expected output is for VALIDATION ONLY — never part of the data flow
 
@@ -1982,7 +2105,7 @@ Save the expected output file to the same UC Volume area as the source data, for
 
 ### 10c. Add a validation source node
 
-Read the expected output as a separate `source` or `python` node (depending on format). Place it **below** the main pipeline flow at the same x-level as the final output, but NOT wired to the Output operator.
+Read the expected output as a separate `source` or `python` node (depending on format). Place it below the main pipeline flow at the same x-level as the final output.
 
 ### 10d. Preferred validation pattern — SQL EXCEPT
 
@@ -2019,7 +2142,7 @@ The most reliable validation is an `EXCEPT` query that returns zero rows on a ma
         COUNT(*) AS diff_rows
       FROM diff
   input:
-    - node: <sort_or_final_transform_node>
+    - node: <sort_or_final_node>
       input_port: data
       output_port: sorted_data
     - node: <expected_source_node>
@@ -2033,7 +2156,7 @@ The most reliable validation is an `EXCEPT` query that returns zero rows on a ma
 
 ### 10d-alt. Run structural validation (row counts by granularity)
 
-For complex pipelines where EXCEPT is impractical, add a `sql` validation node that compares row counts by key dimensions:
+Add a `sql` validation node that compares row counts by key dimensions:
 
 ```yaml
 - id: validation_row_counts
@@ -2161,12 +2284,16 @@ Always emit a `markdown` node that lists the manual steps and the macro path it 
 | Predictive (text/sentiment/classification) | Emit `ai_function` first; fall back to `python` only if labels are dynamic | **READY** |
 | Time Series | Emit `python` with Prophet/statsmodels + MLflow | **REVIEW** |
 | Spatial | Emit `python` with Sedona; if Sedona not enabled, mark **MANUAL** | **REVIEW / MANUAL** |
-| Reporting (Render/Email/Chart/Map) | Two concrete options for email; Lakeview for visual reports | **MANUAL** (see below) |
+| Reporting (Render/Email/Chart/Map) | Out of scope — point user at Lakeview / Job email | **MANUAL** |
 | Interface (Text Box, Drop Down, etc.) | Out of scope — point user at Job parameters / App | **MANUAL** |
 
 For every **REVIEW** / **MANUAL** node, emit an adjacent `markdown` describing what was skipped and how the user should complete it.
 
-### Email Dispatch — Two Concrete Options
+---
+
+### Email dispatch fallbacks (only when the Notifications operator is not enough)
+
+The native **Notifications** operator (`new-operators-reference.md` §1) is the default replacement for the Alteryx Email tool. Use one of the options below only when you need per-row emails, HTML templating, or attachments Notifications cannot produce.
 
 Alteryx workflows frequently end with Email tools that send per-recipient HTML reports. VDP has no native email operator, but two well-tested replacement patterns exist. **Always present both options to the user and let them choose.**
 
@@ -2210,7 +2337,7 @@ Always emit a `markdown` node in the pipeline documenting which option was chose
 - **260px horizontal spacing** between operator tiers.
 - **145px vertical spacing** between parallel branches.
 - **Never overlap operators** — check positions before placing.
-- Add a top-level `markdown` node documenting the pipeline purpose, source workflow filename, and any **MANUAL** items.
+- Add a top-level `markdown` node documenting the pipeline purpose, source workflow filename, and any **MANUAL** items. The full documentation goes in the separate `.md` file from Step 16.
 - For parameterized pipelines, add a `markdown` explaining the `env_config` parameters.
 
 ---
@@ -2245,21 +2372,23 @@ Always emit a `markdown` node in the pipeline documenting which option was chose
 | Designer Filter is graphical, not free-form SQL | Cannot enter `REGEXP_LIKE`, `BETWEEN`, multi-AND-OR mixes directly | Fall back to `sql` operator |
 | Designer Join has no cross-join | Append Fields cannot map to `join` | Use a `sql` operator with `CROSS JOIN` |
 | Aggregate has no collect_list/set (array output) | Alteryx Summarize → Concat List doesn't fit | Use `sql` with `collect_list(col)` / `collect_set(col)`. Note: FIRST, LAST, CONCAT (string), and COUNT_DISTINCT are now natively supported by the Aggregate operator. |
-| Combine requires matching schemas | Heterogeneous Alteryx Unions fail | Pre-align schemas with two `transform` operators before `combine` |
+| Combine requires matching schemas | Heterogeneous Alteryx Unions fail | Use `combine` with `union_by_name` + `allow_missing_columns`; otherwise pre-align with Select (rename/reorder) and Prepare (casts) before `combine` |
 | YAML docstring colon in `description.text` breaks the cell | Downstream cells fail with `'<this>.<port>' data is missing or not created before use` because Designer never registers the broken cell in the dataflow graph | **Always quote** any free-text YAML scalar that may contain `:`, `#`, `{`, `}`, `[`, `]`, `,`, or leading/trailing whitespace. Concretely: emit `text: "Per-category metrics: avg / median / sum / count."` (double-quoted) rather than `text: Per-category metrics: avg / median / sum / count.` |
 | `enter_data` crashes: `'DataFrame' object has no attribute 'map'` | The generated enter_data runtime uses `pdf.map()` (pandas ≥ 2.1.0 only) | Replace with `python` operator using `spark.createDataFrame(data, schema)`. Update downstream wiring: `output_port: data` → `output_port: result`. |
 | ai_extract fields are NULL despite successful parse | ai_extract v2.1 nests data under `response` envelope | Use `ex:response:field:value` path, NOT `ex:field`. See PDF Parse Patterns §Pattern A. |
 | VARIANT column breaks downstream Transform/Join | `UNSUPPORTED_OPERATION` on VARIANT type in Designer preview | CAST all VARIANT to STRING/DOUBLE/DATE inline in the same SQL operator |
 | Join@1.0.0 `expressions: []` duplicates columns | `DLTAnalysisException: duplicate column name` or `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on output | Always set explicit expressions: `["left.*", "right.needed_col"]`, excluding the right-side join key |
 | Output v4.0.0 preview fails with TABLE_OR_VIEW_NOT_FOUND | Preview only does `SELECT * FROM target` — does NOT write | Expected on first run. The actual write happens on Run All. Same for file outputs. Do not "fix" this. |
-| Mixed AI-extracted date formats | `TRY_TO_TIMESTAMP` returns NULL for non-matching formats | Use COALESCE with multiple format patterns in a Transform |
+| Mixed AI-extracted date formats | `TRY_TO_TIMESTAMP` returns NULL for non-matching formats | Use COALESCE with multiple format patterns in a Prepare formula |
+| Select used for a calculation | Expression rejected or silently dropped | Select only picks/renames/reorders/drops. Move CASE WHEN / CAST / arithmetic to a Prepare `formula` action |
+| Sort by an expression | Sort fails or ignores the key | Add a Prepare formula that computes the key, then sort on that column |
+
+---
 | Delta column names with spaces | `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES` on write | VDP Output operator handles this automatically via column mapping. But companion notebooks (e.g., email sender) writing to the same table must explicitly set `.option("delta.columnMapping.mode", "name")` on `saveAsTable()`. This upgrades the table to minReaderVersion=2, minWriterVersion=5. Rename columns to snake_case early in the pipeline to avoid this entirely. |
 | Compute context isolation | Tables written via serverless VDP Designer may not be immediately visible on classic clusters | Serverless and classic compute use separate metastore caches. After VDP `Run All`, a classic cluster notebook may need `REFRESH TABLE catalog.schema.table` or a fresh `spark.table()` call. For job-chained workflows, use the same compute type for both tasks. |
 | Conditional aggregation decomposition | Alteryx finance workflows use Filter → multiple Summarize branches for version-specific measures | Instead of separate Filter+Aggregate chains per version code, use a single **Prepare** operator with CASE WHEN columns (e.g., `CASE WHEN version = 'ACT' AND month <= 8 THEN amount ELSE 0 END AS actual_ytd`) followed by one **Aggregate**. This reduces N filter+aggregate pairs to 2 operators. See §15g. |
 | Workflow triage by tool category | 60-80% of Alteryx tool count may be MANUAL (PortfolioComposer, Email, Browse) | Count tools by category FIRST before estimating conversion effort. Reporting/email/browse tools are all MANUAL but inflate tool counts dramatically. Focus effort on the data-flow tools (Filter, Formula, Join, Summarize). |
 | UDO not yet registered | Pipeline references a UDO template that doesn't exist in `.user_defined_operators.yaml` | The pipeline will fail at parse time with an unknown template error. Always verify UDO registration before referencing. Emit a `markdown` note with registration instructions. |
-
----
 
 ## Step 15: Common Alteryx Patterns & VDP Equivalents
 
@@ -2346,7 +2475,52 @@ After a faithful 1:1 Alteryx→VDP conversion, perform an optimization pass to r
 
 **Rule of thumb**: A well-optimized VDP pipeline should have ~60-65% of the cell count of a faithful 1:1 conversion.
 
-### 15g. Finance workflow patterns
+### Lessons from real conversions (IC Loans Export.yxmd, 170 tools)
+
+### 15g. Semicolon-delimited CSVs read into a single column
+
+Symptom: the Source preview shows one column named like `Date;Account;Amount` and every row is one long string. Fix: set `delimiter: ";"` in `file_source` (take the delimiter from the Alteryx Input tool XML). Never split the single column afterwards with formulas — fix it at the source.
+
+### 15h. Headers that carry dates
+
+Wide exports often use period names as column headers (`2024-01`, `Jan 24`, `31.12.2023`), which change every period and often contain characters Delta rejects. Alteryx handles this with Dynamic Rename / Transpose.
+- Unpivot the period columns to long format (`pivot` in Columns → Rows mode) so the header becomes a value, then `parse_date` it in Prepare.
+- Never hard-code this period's header names in formulas — the pipeline breaks next period. Use a Select dynamic block (by name pattern) or unpivot by excluding the fixed ID columns.
+- If the header must stay as a column, rename it to a stable, Delta-safe name (e.g. `period_current`, `period_prior`) and record the mapping in the docs.
+
+### 15i. Column names Delta rejects
+
+Delta (without column mapping) rejects spaces and ` ,;{}()\n\t=` in column names; Alteryx allows them, along with `/`, `%`, `#`, and leading digits. Rename at the first operator (Select, or `rename_columns` in Prepare) to snake_case, check that sanitizing doesn't create duplicates (`Amount (EUR)` and `Amount EUR` → same name), and update every downstream reference. Keep the original → new name mapping in the documentation, and restore display names in the final Select only if the user's output format (CSV / Excel) needs them.
+
+### 15j. Alteryx "Contains" is case-insensitive
+
+Alteryx `Contains(String, Target)` is **case-insensitive by default** (third argument defaults to 1). Spark `contains()`, `LIKE` and `instr()` are case-sensitive, so a literal translation silently drops rows. Translate as `lower(col) LIKE lower('%target%')` or `col ILIKE '%target%'`. Only use a case-sensitive match when the Alteryx call explicitly passes `0`. Check `StartsWith` / `EndsWith` / `FindString` the same way and confirm the case behaviour of each function before translating.
+
+### 15k. Turned-off (disabled) containers
+
+A Tool Container with `<Disabled value="True" />` in its XML configuration does not run in Alteryx — none of the tools inside it execute, and their connections are dead. **Do not convert them.** Before mapping, list every disabled container and its child tool IDs, exclude them from the DAG, and record them in the documentation ("present in the .yxmd but disabled — not converted"). Ask the user only if a disabled container looks like it should be active (e.g. it feeds the only output).
+
+### 15l. Trailing-space field names
+
+Alteryx field names can carry trailing (or leading) spaces, e.g. `[Amount ]`, and formulas reference them exactly. In Spark these become different, invisible column names that break joins and lookups. Trim all column names at the first operator, and trim names when matching XML field references to columns. Count the columns in the preview to catch it: `Amount` and `Amount ` can both appear.
+
+### 15m. Comma decimals
+
+Values like `1.234,56` (comma as decimal, dot as thousands separator) arrive as strings. `CAST` returns NULL or fails under ANSI mode. Convert in a Prepare formula: `TRY_CAST(REPLACE(REPLACE(TRIM(col), '.', ''), ',', '.') AS DECIMAL(38,6))`. Then count NULLs before vs. after to confirm nothing was lost. Do not apply this to columns that already use a dot decimal — check each column's sample values.
+
+### 15n. Text-vs-number filters
+
+Alteryx compares according to the declared field type in the XML `<RecordInfo>`. In Spark, a string column compared with a number literal is implicitly cast (leading zeros lost: `'0100' = 100` is true; non-numeric values fail under ANSI mode), and a numeric column compared with a string compares differently. Check the Alteryx field type and write the filter with the same type: quote literals for string fields (`code = '0100'`), cast explicitly when Alteryx converted (`TRY_CAST(code AS INT) = 100`). Compare the filtered row counts with Alteryx's.
+
+### 15o. Total-row patterns
+
+Two patterns show up repeatedly:
+- **Total rows in the source** (`Total`, `Grand Total`, `Summe`, blank-key subtotal rows in report exports): Alteryx filters them out, sometimes implicitly through a later join. Filter them out explicitly right after the source, otherwise every SUM is doubled.
+- **Total rows added by the workflow** (Summarize with no group-by, then Union): rebuild as `aggregate` with empty `group_bys` → Prepare formula adding the label column (e.g. `'Total' AS account`) → `combine` with `union_by_name`. If the total must be the last row, add a Prepare sort-key column (0 for detail, 1 for total) and sort on it.
+
+---
+
+### 15p. Finance workflow patterns
 
 Corporate finance Alteryx workflows (cost center reporting, budget vs actuals, P&L snapshots) share recurring patterns that map well to VDP once decomposed correctly.
 
@@ -2379,7 +2553,7 @@ When multiple reference tables (master data, hierarchy, recipients) join to a fa
    - Master data: `m_company_code`, `m_cost_center`
    - Hierarchy: `h_cost_center`
    - Recipients: `r_company_code`, `r_cost_center`
-2. **Transform** (select) operator between Prepare and Join: select ONLY the columns needed from each reference table to avoid carrying unnecessary columns through the join chain.
+2. **Select** operator between Prepare and Join: select ONLY the columns needed from each reference table to avoid carrying unnecessary columns through the join chain.
 3. **Join** operators: use prefixed keys in join conditions (`left.company_code = right.m_company_code AND left.cost_center = right.m_cost_center`).
 4. Use explicit `expressions` in Join config to exclude the prefixed join keys from the output (they’re duplicates of the fact table keys).
 
@@ -2415,87 +2589,19 @@ Before starting conversion, count Alteryx tools by category. A typical finance w
 
 ---
 
-## Conversion Checklist
+### 15q. Complex multi-source transformations (PPV / financial projections)
 
-- [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
-- [ ] Each tool converted to a VDP operator OR explicitly flagged **MANUAL/REVIEW**
-- [ ] Execution engine checked (Step 1a): AMP/`RunE2` workflows converted normally; order-sensitive tools given an explicit sort
-- [ ] Join→Union outer-join idioms collapsed into single `join` nodes (Step 1b)
-- [ ] DCM/ODBC inputs that point at Databricks treated as UC tables, not third-party sources
-- [ ] Run-date filters in source queries parameterized, with a default that matches Alteryx
-- [ ] All input file formats handled per Step 3 (`.yxdb` *inputs* flagged for export; `.yxdb` *outputs* → Delta table)
-- [ ] Excel ingest uses native `source` operator when possible (full file, single sheet, Excel File Format Support enabled); Python only for sheet/range/named range or legacy formats
-- [ ] JSON/CSV file outputs use native `output` operator (not Python)
-- [ ] Excel write-back is a secondary sink AFTER Delta output (Step 9a) — never the only output
-- [ ] PDF parse uses `ai_parse_document()` → `ai_extract()` chain with error filtering (`is_variant_null`)
-- [ ] ai_extract fields accessed via `ex:response:field:value` path (v2.1 nested envelope)
-- [ ] No VARIANT columns flow to downstream operators (all CAST inline in the SQL)
-- [ ] All join operators have explicit `expressions` (no empty `[]` that duplicates keys)
-- [ ] enter_data operator previews successfully (fallback to Python if pandas `.map()` fails)
-- [ ] Source files placed in UC Volume (not Workspace `file:` paths)
-- [ ] All column names are Delta-compatible (no spaces, no special chars)
-- [ ] Type casts handle dirty data (filter or `TRY_CAST`)
-- [ ] SQL operators reference simple display names (no spaces)
-- [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`); fixed-column Text To Columns use `transform` with `SPLIT` + `ELEMENT_AT`; reserve `sql` for multi-granularity UNION ALL, row explosion, window functions, or unsupported functions
-- [ ] Mandatory 9-question visual-operator pre-check completed before every `sql`, `python`, or `ai_function` operator
-- [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
-- [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
-- [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
-- [ ] Python operators assessed for UDO promotion (reusable logic → `uc-udf` / `uc-udtf` / `python-run-function`)
-- [ ] Unsupported patterns checked for **local UDO** feasibility FIRST (`+ Create user-defined operator` → Generate preview), then shared UDO feasibility, BEFORE falling back to raw `python` or `sql` (Step: Unsupported Patterns rule §2)
-- [ ] Filter operators use v2.0.0 when both T/F branches are needed (filtered_data + excluded_data)
-- [ ] Join operators use split_join when Alteryx L/J/R outputs are all needed (3 output ports)
-- [ ] Aggregate operators use COUNT_DISTINCT, FIRST, LAST, CONCAT where applicable (no SQL needed)
-- [ ] Reusable custom Python logic assessed for UDO promotion (`uc-udf` / `uc-udtf` / `python-run-function`) — adjacent `markdown` node added if a UDO is used
-- [ ] User was asked before consolidating multiple SQL window nodes into one
-- [ ] Deduplication uses visual `unique` operator (not SQL ROW_NUMBER) — reserve SQL only for multi-partition dedup or complex window logic
-- [ ] Joins preserve L / J / R branches required downstream
-- [ ] Macros — standard inlined or extracted; iterative flagged for Job
-- [ ] Predictive / spatial / time-series — Python operator emitted, MLflow noted, marked **REVIEW**
-- [ ] Reporting / interface — flagged **MANUAL** with Lakeview / Job / App pointer
-- [ ] Output operator configured with `catalog.schema.table_name`
-- [ ] Optional non-Delta sinks added downstream of the Delta output (Step 9b)
-- [ ] Simple Excel/CSV/JSON file outputs use native `output` operator (not Python)
-- [ ] Excel append scenarios use `output` with `write_mode: append` (not Python)
-- [ ] Merge/upsert scenarios use `output` with `write_mode: merge` + `merge_keys` (not Python/SQL MERGE)
-- [ ] Output node previews with no errors
-- [ ] Expected output file obtained from user (asked explicitly if not provided)
-- [ ] Structural validation passed (row counts by granularity match or differences explained)
-- [ ] Numeric validation passed (values within 0.1% tolerance, or data regeneration documented)
-- [ ] Article-level pre-aggregation verified (if applicable — non-Region branches aggregate before price calculation)
-- [ ] Historical data source included (if workflow unions computed results with prior-period `.yxdb` data)
-- [ ] Data validation performed and validation nodes removed afterwards
-- [ ] Post-conversion optimization performed (redundant sorts/renames removed, fan-out consolidated — §15f)
-- [ ] Column schemas verified consistent across UNION branches after optimization
-- [ ] Pipeline tested end-to-end
-- [ ] Layout is clean and readable (horizontal flow, no overlaps)
-- [ ] Top-level `markdown` documents pipeline purpose and any MANUAL items
-- [ ] Expected output file used for VALIDATION ONLY — never wired into the main data flow (Step 10 critical rule)
-- [ ] Delta column mapping mode set in companion notebooks when column names have spaces (`delta.columnMapping.mode = 'name'`)
-- [ ] Conditional aggregation uses Prepare (CASE WHEN flags) → Aggregate pattern, not separate Filter+Aggregate chains per version (§15g)
-- [ ] Join key prefixes used for multi-table scenarios to avoid column collisions (§15g)
-- [ ] Email dispatch option documented in pipeline `markdown` node (Option 1: in-pipeline Python/UDO, Option 2: job-chained notebook) (Step 12)
-- [ ] Workflow triaged by tool category before conversion — MANUAL tools (reporting/email/browse) counted separately from data-flow tools (§15g)
-- [ ] Complex multi-source flows (>5 inputs) use a single Python operator rather than a visual join chain (§15h)
-- [ ] Python operator input ordering documented at top of code block (§15h)
-- [ ] Orphaned visual operators cleaned up after Python consolidation (§15h)
-- [ ] Undocumented Alteryx business rules flagged in pipeline markdown note (§15h)
+#### Lessons learned from PPV Projection migration (10-source, 83-column financial workflow)
 
----
+When an Alteryx workflow joins 5+ source tables with conditional logic, FX cross-rates, and cascading lookups, visual join/select/prepare chains become impractical. The following patterns apply.
 
-## Step 15h: Complex Multi-Source Transformations (PPV / Financial Projections)
-
-### Lessons learned from PPV Projection migration (10-source, 83-column financial workflow)
-
-When an Alteryx workflow joins 5+ source tables with conditional logic, FX cross-rates, and cascading lookups, visual join/transform/prepare chains become impractical. The following patterns apply.
-
-### 15h-1. Go straight to Python for complex multi-source logic
+#### 15q-1. Go straight to Python for complex multi-source logic
 
 If the Alteryx workflow has >5 inputs with conditional joins, currency cross-rates, or cascading lookups, skip the visual join chain and use a single Python operator from the start. Building an intermediate chain of Rename → Join → Join → Prepare operators wastes effort — the visual operators cannot express the full conditional logic and will be replaced by a Python operator anyway.
 
 **Threshold rule:** If the Alteryx canvas has ≥5 source nodes feeding into a convergence point with conditional column derivation (e.g., "use PO price if available, else PIR, else Invoice"), emit a single Python operator that reads all sources via `inputs["data"][0..N]`.
 
-### 15h-2. Document Python operator input ordering
+#### 15q-2. Document Python operator input ordering
 
 When a Python operator uses `inputs["data"][0]`, `inputs["data"][1]`, etc., the order depends on the YAML `input` list. One reorder silently breaks everything. Always add a comment block at the top of the Python code mapping index to source:
 
@@ -2508,7 +2614,7 @@ When a Python operator uses `inputs["data"][0]`, `inputs["data"][1]`, etc., the 
 # ...
 ```
 
-### 15h-3. FX cross-rate pattern
+#### 15q-3. FX cross-rate pattern
 
 Currency conversion via an intermediary (typically EUR) is common in SAP-sourced Alteryx flows. It requires 3 self-joins on the same FX rate table — one per currency role:
 
@@ -2524,7 +2630,7 @@ PPV formula: `PPV = (doc_price × FX_cross_rate − standard_price) × quantity`
 
 For EUR-denominated PPV: `PPV_EUR = (doc_price × doc_to_EUR − std_price × company_to_EUR) × quantity`
 
-### 15h-4. SAP FISCPER period decoding
+#### 15q-4. SAP FISCPER period decoding
 
 SAP fiscal period encoding (e.g., 2026008) appears in nearly every SAP-sourced Alteryx flow:
 
@@ -2536,7 +2642,7 @@ period_label = f"{year}-P{month:02d}"  # "2026-P09"
 
 The +1 offset is easy to miss — the FISCPER month field is 0-indexed relative to the fiscal year start.
 
-### 15h-5. Expect undocumented Alteryx business rules
+#### 15q-5. Expect undocumented Alteryx business rules
 
 Alteryx workflows frequently contain hidden logic that is not documented in any PowerPoint, README, or source file. These only surface during validation against expected output.
 
@@ -2548,24 +2654,135 @@ Common examples:
 
 **Action:** When validation shows a systematic discrepancy (e.g., all rows for one company code are ~11% off), document it in the pipeline `markdown` note with the observed ratio and possible causes. Do not silently adjust values to match — flag the gap for the business owner to confirm.
 
-### 15h-6. Validation belongs outside the production pipeline
+#### 15q-6. Validation belongs outside the production pipeline
 
 Expected output files are for migration validation only. They should NOT be wired as source operators in the production pipeline. Run validation in a separate notebook or one-off SQL comparison, then remove all validation-related operators before finalizing the pipeline.
 
 This reinforces Step 10h: clean up after validation.
 
-### 15h-7. Clean up orphaned operators after Python consolidation
+#### 15q-7. Clean up orphaned operators after Python consolidation
 
-When a Python operator replaces a visual join chain, the original Rename Transform → Join → Join → Prepare operators become orphaned (disconnected from the dataflow). These must be deleted to avoid confusion:
+When a Python operator replaces a visual join chain, the original Rename (Select) → Join → Join → Prepare operators become orphaned (disconnected from the dataflow). These must be deleted to avoid confusion:
 
 1. Identify all operators whose output is no longer consumed by any downstream node
 2. Delete them from the notebook cells (they are individual cells in the .designer.ipynb)
 3. Verify the remaining pipeline has no broken input references
 
-### 15h-8. UDO assessment for complex migrations
+#### 15q-8. UDO assessment for complex migrations
 
 In a multi-source financial migration:
 - The core transformation Python operator is NOT a good UDO candidate (too domain-specific, too many inputs, not reusable)
 - A dataset validation/comparison operator IS a good UDO candidate — a generic "Compare two DataFrames by key with configurable column tolerances" operator is reusable across migration projects
 - FX cross-rate calculation COULD be a UDO if the same currency conversion pattern appears across multiple pipelines
+
+
+## Step 16: Workflow Documentation (.md file)
+
+Documentation is a **required final step of every conversion**, never optional. It has two parts:
+- A **"Workflow documentation" Note** (`markdown` node named `workflow_documentation`) in the pipeline, with a short summary and the path to the `.md` file.
+- A **Markdown documentation file** (the full record), described below.
+
+### 16a. Ask where to save it
+
+**Always ask the user where to save the documentation** before creating the file. Do not pick a location silently. Ask:
+
+> "I'll generate a Markdown documentation file for this conversion. Where should I save it? (e.g. next to the pipeline in `/Workspace/Users/<you>/...`, a project folder, or a UC Volume path such as `/Volumes/<catalog>/<schema>/<volume>/docs/`)"
+
+- Suggest a default file name: `<alteryx_workflow_name>_conversion.md` (e.g. `IC_Loans_Export_conversion.md`).
+- Suggest the pipeline's folder as the default location, but wait for the user's answer.
+- Create the file with the file-creation tool (not by writing from a `python` operator).
+
+### 16b. Required contents
+
+1. **Overview** — source workflow filename, purpose, tool count, conversion date.
+2. **Inputs** — every source (UC table, Volume path, file format, sheet/range, external or third-party source and how access was obtained).
+3. **Outputs** — the destination the user chose in Step 9a (Delta table name and/or file format + Volume path), plus write mode.
+4. **Tool-to-operator mapping** — table of Alteryx tool ID / tool type / VDP operator / notes.
+5. **Business logic** — formulas, filters, joins, and aggregations in plain language, including any Alteryx quirks reproduced.
+6. **MANUAL / REVIEW items** — what the user must do outside the pipeline.
+7. **Validation results** — method (expected output or re-run of the Alteryx logic), row counts, numeric differences and explanations.
+8. **Known differences and assumptions** — anything that does not match the Alteryx output exactly, and why.
+
+### 16c. Keep it in sync
+
+If the pipeline changes after the file is written (optimization pass, validation fixes, a different output destination), update the `.md` file in the same location.
+
+---
+
+## Conversion Checklist
+
+- [ ] Alteryx `.yxmd` / `.yxmc` analyzed — every `<Node>` and `<Connection>` mapped
+- [ ] Each tool converted to a VDP operator OR explicitly flagged **MANUAL/REVIEW**
+- [ ] Execution engine checked (Step 1a): AMP/`RunE2` workflows converted normally; order-sensitive tools given an explicit sort
+- [ ] Join→Union outer-join idioms collapsed into single `join` nodes (Step 1b)
+- [ ] DCM/ODBC inputs that point at Databricks treated as UC tables, not third-party sources
+- [ ] Run-date filters in source queries parameterized, with a default that matches Alteryx
+- [ ] All input file formats handled per Step 3 (`.yxdb` *inputs* flagged for export; `.yxdb` *outputs* → Delta table)
+- [ ] Excel ingest uses native `source` operator when possible (full file, single sheet, Excel File Format Support enabled); Python only for sheet/range/named range or legacy formats
+- [ ] JSON/CSV file outputs use native `output` operator (not Python)
+- [ ] User was asked for the output destination (Delta table, CSV/Excel/JSON export, or both) and write mode (Step 9a)
+- [ ] When both Delta and a file export were chosen, the file write is a secondary sink after the Delta output
+- [ ] PDF parse uses `ai_parse_document()` → `ai_extract()` chain with error filtering (`is_variant_null`)
+- [ ] ai_extract fields accessed via `ex:response:field:value` path (v2.1 nested envelope)
+- [ ] No VARIANT columns flow to downstream operators (all CAST inline in the SQL)
+- [ ] All join operators have explicit `expressions` (no empty `[]` that duplicates keys)
+- [ ] enter_data operator previews successfully (fallback to Python if pandas `.map()` fails)
+- [ ] Source files placed in UC Volume (not Workspace `file:` paths)
+- [ ] All column names are Delta-compatible (no spaces, no special chars)
+- [ ] Type casts handle dirty data (filter or `TRY_CAST`)
+- [ ] SQL operators reference simple display names (no spaces)
+- [ ] Simple GROUP BY aggregations use visual `aggregate` operator (not `sql`); fixed-column Text To Columns use `transform` with `SPLIT` + `ELEMENT_AT`; reserve `sql` for multi-granularity UNION ALL, row explosion, window functions, or unsupported functions
+- [ ] Mandatory 9-question visual-operator pre-check completed before every `sql`, `python`, or `ai_function` operator
+- [ ] Each logical step has its own operator (no unnecessary CTE consolidation without user approval)
+- [ ] AI functions used ONLY for creative/generative text on low-cardinality data (NOT for finite mappings)
+- [ ] Python operators contain ONLY file I/O or ML code (no SOUNDEX, CASE WHEN, groupBy, datediff)
+- [ ] Python operators assessed for UDO promotion (reusable logic → `uc-udf` / `uc-udtf` / `python-run-function`)
+- [ ] Filter operators use v2.0.0 when both T/F branches are needed (filtered_data + excluded_data)
+- [ ] Join operators use split_join when Alteryx L/J/R outputs are all needed (3 output ports)
+- [ ] Aggregate operators use COUNT_DISTINCT, FIRST, LAST, CONCAT where applicable (no SQL needed)
+- [ ] Reusable custom Python logic assessed for UDO promotion (`uc-udf` / `uc-udtf` / `python-run-function`) — adjacent `markdown` node added if a UDO is used
+- [ ] User was asked before consolidating multiple SQL window nodes into one
+- [ ] Deduplication uses visual `unique` operator (not SQL ROW_NUMBER) — reserve SQL only for multi-partition dedup or complex window logic
+- [ ] Joins preserve L / J / R branches required downstream
+- [ ] Macros — standard inlined or extracted; iterative flagged for Job
+- [ ] Predictive / spatial / time-series — Python operator emitted, MLflow noted, marked **REVIEW**
+- [ ] Reporting / interface — flagged **MANUAL** with Lakeview / Job / App pointer
+- [ ] Output operator configured with the user's chosen destination (`catalog.schema.table_name` and/or Volume path + file name + file type)
+- [ ] Python sinks used only for formats the native output cannot write (Step 9c)
+- [ ] Simple Excel/CSV/JSON file outputs use native `output` operator (not Python)
+- [ ] Excel append scenarios use `output` with `write_mode: append` (not Python)
+- [ ] Merge/upsert scenarios use `output` with `write_mode: merge` + `merge_keys` (not Python/SQL MERGE)
+- [ ] Output node previews with no errors
+- [ ] Live operator catalog compared against this file at Step 0; new operators reported to the user and used
+- [ ] No calculations in Select; all formulas in Prepare actions; `fill_null` uses `with`; Sort keys are columns, not formulas
+- [ ] Combine / Join inputs wired to the single multi-input port (no `data_0` / `data_1`)
+- [ ] Third-party sources: user offered a Databricks connection option or given a generated IT ticket (Step 4)
+- [ ] Every CSV source previewed for delimiter, encoding, header, comma decimals and total rows (Step 4 CSV pitfalls)
+- [ ] Disabled containers excluded and listed in the documentation (§15k)
+- [ ] Column names trimmed and made Delta-safe; date-carrying headers handled without hard-coding (§15h, §15i, §15l)
+- [ ] Alteryx Contains translated case-insensitively; text-vs-number filters use the Alteryx field type (§15j, §15n)
+- [ ] Expected output file obtained from user (asked explicitly if not provided), OR step-by-step re-run validation done (10a-alt) with temporary steps removed
+- [ ] Structural validation passed (row counts by granularity match or differences explained)
+- [ ] Numeric validation passed (values within 0.1% tolerance, or data regeneration documented)
+- [ ] Article-level pre-aggregation verified (if applicable — non-Region branches aggregate before price calculation)
+- [ ] Historical data source included (if workflow unions computed results with prior-period `.yxdb` data)
+- [ ] Data validation performed and validation nodes removed afterwards
+- [ ] Post-conversion optimization performed (redundant sorts/renames removed, fan-out consolidated — §15f)
+- [ ] Column schemas verified consistent across UNION branches after optimization
+- [ ] Pipeline tested end-to-end
+- [ ] Layout is clean and readable (horizontal flow, no overlaps)
+- [ ] Top-level `markdown` documents pipeline purpose and any MANUAL items
+- [ ] "Workflow documentation" Note added to the pipeline as the final step (Step 16)
+- [ ] User was asked where to save the workflow documentation `.md` file (Step 16a)
+- [ ] Documentation `.md` file created at that location with all Step 16b sections, and updated after any later pipeline changes
+- [ ] Unsupported patterns checked for a **local / inline UDO** FIRST, then a shared UDO, BEFORE falling back to raw `python` or `sql` (CRITICAL RULE: Unsupported or Uncovered Patterns)
+- [ ] Expected output file used for VALIDATION ONLY — never wired into the main data flow (Step 10 critical rule)
+- [ ] SQL EXCEPT validation used when an expected output exists (10d); structural/numeric checks as fallback (10d-alt, 10e)
+- [ ] Delta column mapping mode set in companion notebooks when column names have spaces (`delta.columnMapping.mode = 'name'`)
+- [ ] Email handled with the Notifications operator, or a documented fallback option (Step 12)
+- [ ] Workflow triaged by tool category before conversion — MANUAL tools counted separately from data-flow tools (§15p)
+- [ ] Conditional aggregation uses Prepare (CASE WHEN flags) → Aggregate, not separate Filter+Aggregate chains per version (§15p)
+- [ ] Join key prefixes used for multi-table scenarios to avoid column collisions (§15p)
+- [ ] Complex multi-source flows (>5 inputs) use a single Python operator, input ordering documented, orphaned operators removed (§15q)
+- [ ] Undocumented Alteryx business rules flagged in the pipeline markdown note (§15q)
 
